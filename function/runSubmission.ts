@@ -16,7 +16,7 @@ const pool = new Pool({ connectionString: databaseUrl });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-async function runSubmission(submissionId: number) {
+export async function runSubmission(submissionId: number) {
   const submission = await prisma.submission.findUnique({
     where: { id: submissionId },
     include: {
@@ -93,7 +93,9 @@ async function main() {
 }
 
 // CLI 実行前提
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
