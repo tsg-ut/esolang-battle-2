@@ -54,13 +54,15 @@ model Board {
   contestId    Int     @unique
 
   /// e.g. list of languages shown on the board
-  languages        Json
+  languages              Json
+  // where languages are placed on the board (e.g. column index)
+  dispositionOfLanguages Json
   /// color configuration per language
-  colorOfLanguages Json
+  colorOfLanguages       Json
   /// score configuration / current scores per language
-  scoreOfLanguages Json
+  scoreOfLanguages       Json
   /// board edges / graph structure
-  edges            Json
+  edges                  Json
 }
 
 /// Programming language used for submissions
