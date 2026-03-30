@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
+import { PassThrough } from "stream";
 import Docker from "dockerode";
 
 const docker = new Docker();
@@ -42,17 +43,24 @@ export async function runCode(
 		},
 	});
 
-	const stream = await container.attach({
+	const attachStream = await container.attach({
 		stream: true,
 		stdout: true,
 		stderr: true,
 	});
 
 	const outputChunks: Buffer[] = [];
-	stream.on("data", (chunk: Buffer) => {
+	const stdoutStream = new PassThrough();
+	const stderrStream = new PassThrough();
+
+	stdoutStream.on("data", (chunk: Buffer) => {
 		outputChunks.push(chunk);
 		process.stdout.write(chunk);
 	});
+
+	// Docker の multiplexed ストリームを stdout/stderr に demux する
+	// 型の都合で docker を any キャストする
+	(docker as any).modem.demuxStream(attachStream, stdoutStream, stderrStream);
 
 	const start = Date.now();
 	await container.start();
