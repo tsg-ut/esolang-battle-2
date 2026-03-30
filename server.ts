@@ -6,6 +6,7 @@ import { getBoard } from "./function/getBoard.js";
 import { getProblem } from "./function/getProblem.js";
 import { testCode } from "./function/testCode.js";
 import { getLanguages } from "./function/getLanguages.js";
+import { getSubmissionDetail } from "./function/getSubmissionDetail.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -109,7 +110,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, result);
     }
 
-    // GET /api/submissions : Submission 一覧取得（自分の分のみ）
+    // GET /api/submissions / /api/submissions/:id : Submission 一覧 or 詳細（自分の分のみ）
     if (req.method === "GET" && req.url.startsWith("/api/submissions")) {
       const currentUserId = getCurrentUserId(req);
       if (!currentUserId) {
@@ -117,14 +118,34 @@ const server = http.createServer(async (req, res) => {
       }
 
       const url = new URL(req.url, `http://localhost:${PORT}`);
-      const problemIdParam = url.searchParams.get("problemId");
-      const languageIdParam = url.searchParams.get("languageId");
+      const segments = url.pathname.split("/").filter(Boolean); // ["api", "submissions", ":id?"]
 
       const toNumber = (v: string | null): number | undefined => {
         if (v === null) return undefined;
         const n = Number(v);
         return Number.isFinite(n) ? n : undefined;
       };
+
+      // 詳細: /api/submissions/:id
+      if (segments.length === 3) {
+        const idSegment = segments[2];
+        const submissionId = Number(idSegment);
+
+        if (!Number.isFinite(submissionId) || submissionId <= 0) {
+          return sendJson(res, 400, { error: "Invalid submission id" });
+        }
+
+        const detail = await getSubmissionDetail(submissionId, currentUserId);
+        if (!detail) {
+          return sendJson(res, 404, { error: "Submission not found" });
+        }
+
+        return sendJson(res, 200, detail);
+      }
+
+      // 一覧: /api/submissions
+      const problemIdParam = url.searchParams.get("problemId");
+      const languageIdParam = url.searchParams.get("languageId");
 
       const problemId = toNumber(problemIdParam);
       const languageId = toNumber(languageIdParam);
