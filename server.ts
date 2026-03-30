@@ -13,6 +13,11 @@ import { getUserInfo, verifyUserLogin, registerUser } from "./function/authUser.
 import { getUsersWithTeams } from "./function/getUsers.js";
 import { getTeams } from "./function/getTeams.js";
 import {
+  listProblemsForAdmin,
+  createProblemForAdmin,
+  updateProblemForAdmin,
+} from "./function/adminProblems.js";
+import {
   updateBoardFromSubmissions,
   recomputeBoardFromSubmissions,
 } from "./function/updateBoardFromSubmissions.js";
@@ -286,6 +291,125 @@ const server = http.createServer(async (req, res) => {
         });
       } finally {
         await prismaLocal.$disconnect();
+      }
+    }
+
+    // GET /api/admin/problems : 問題一覧（管理者専用）
+    if (req.method === "GET" && req.url === "/api/admin/problems") {
+      const currentUserId = getCurrentUserId(req);
+      if (!currentUserId) {
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
+      const me = await getUserInfo(currentUserId);
+      if (!me) {
+        return sendJson(res, 404, { error: "User not found" });
+      }
+      if (!me.isAdmin) {
+        return sendJson(res, 403, { error: "管理者のみ問題一覧を参照できます" });
+      }
+
+      const problems = await listProblemsForAdmin();
+      return sendJson(res, 200, { problems });
+    }
+
+    // POST /api/admin/problems : 問題追加（管理者専用）
+    if (req.method === "POST" && req.url === "/api/admin/problems") {
+      const currentUserId = getCurrentUserId(req);
+      if (!currentUserId) {
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
+      const me = await getUserInfo(currentUserId);
+      if (!me) {
+        return sendJson(res, 404, { error: "User not found" });
+      }
+      if (!me.isAdmin) {
+        return sendJson(res, 403, { error: "管理者のみ問題を追加できます" });
+      }
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+      const rawBody = Buffer.concat(chunks).toString("utf8");
+
+      let body: any;
+      try {
+        body = rawBody ? JSON.parse(rawBody) : {};
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+
+      const { contestId, problemStatement } = body ?? {};
+      const contestIdNum = Number(contestId);
+      if (!Number.isFinite(contestIdNum) || contestIdNum <= 0) {
+        return sendJson(res, 400, { error: "contestId must be a positive number" });
+      }
+      if (typeof problemStatement !== "string" || !problemStatement.trim()) {
+        return sendJson(res, 400, { error: "problemStatement is required" });
+      }
+
+      try {
+        const problem = await createProblemForAdmin(contestIdNum, problemStatement);
+        return sendJson(res, 201, { problem });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return sendJson(res, 400, { error: msg });
+      }
+    }
+
+    // PATCH /api/admin/problems/:id : 問題編集（管理者専用）
+    if (req.method === "PATCH" && req.url.startsWith("/api/admin/problems/")) {
+      const currentUserId = getCurrentUserId(req);
+      if (!currentUserId) {
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
+      const me = await getUserInfo(currentUserId);
+      if (!me) {
+        return sendJson(res, 404, { error: "User not found" });
+      }
+      if (!me.isAdmin) {
+        return sendJson(res, 403, { error: "管理者のみ問題を編集できます" });
+      }
+
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      const segments = url.pathname.split("/").filter(Boolean); // ["api","admin","problems",":id"]
+      const idSegment = segments[3];
+      const problemId = Number(idSegment);
+      if (!Number.isFinite(problemId) || problemId <= 0) {
+        return sendJson(res, 400, { error: "Invalid problem id" });
+      }
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+      const rawBody = Buffer.concat(chunks).toString("utf8");
+
+      let body: any;
+      try {
+        body = rawBody ? JSON.parse(rawBody) : {};
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+
+      const { contestId, problemStatement } = body ?? {};
+      const contestIdNum = Number(contestId);
+      if (!Number.isFinite(contestIdNum) || contestIdNum <= 0) {
+        return sendJson(res, 400, { error: "contestId must be a positive number" });
+      }
+      if (typeof problemStatement !== "string" || !problemStatement.trim()) {
+        return sendJson(res, 400, { error: "problemStatement is required" });
+      }
+
+      try {
+        const problem = await updateProblemForAdmin(problemId, contestIdNum, problemStatement);
+        return sendJson(res, 200, { problem });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return sendJson(res, 400, { error: msg });
       }
     }
 
