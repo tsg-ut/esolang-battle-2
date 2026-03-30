@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/tsg-ut/esolang-battle-2#readme",
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^25.5.0",
     "prisma": "^7.6.0",
     "tsx": "^4.21.0",
@@ -29,8 +30,8 @@
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
     "@types/dockerode": "^4.0.1",
+    "bcryptjs": "^2.4.3",
     "dockerode": "^4.0.10",
-    "pg": "^8.20.0",
-    "bcryptjs": "^2.4.3"
+    "pg": "^8.20.0"
   }
 }
