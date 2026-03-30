@@ -133,7 +133,7 @@ model Submission {
   code        String
   codeLength  Int
   submittedAt DateTime
-  score       Int
+  score       Int?
 
   language   Language @relation(fields: [languageId], references: [id])
   languageId Int
