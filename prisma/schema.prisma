@@ -81,6 +81,7 @@ model Language {
 /// A problem to be solved in the contest
 model Problem {
   id               Int        @id @default(autoincrement())
+  title            String
   problemStatement String
 
   contest   Contest @relation(fields: [contestId], references: [id])
