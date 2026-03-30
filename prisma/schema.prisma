@@ -70,7 +70,7 @@ model Language {
   id            Int      @id @default(autoincrement())
   dockerImageId String
   description   String
-  name          String   @default("")
+  name          String
 
   submissions      Submission[]
   acceptedProblems Problem[]   @relation("ProblemAcceptedLanguages")
