@@ -7,8 +7,53 @@ import { CodeTestTab } from "./tabs/CodeTestTab";
 
 type TabId = "board" | "problem" | "submit" | "submissions" | "codeTest";
 
+function pathnameToTab(pathname: string): TabId {
+  if (pathname === "/problem") return "problem";
+  if (pathname === "/submit") return "submit";
+  if (pathname === "/submissions") return "submissions";
+  if (pathname === "/code_test") return "codeTest";
+  // "/" やその他は盤面扱い
+  return "board";
+}
+
+function tabToPath(tab: TabId): string {
+  switch (tab) {
+    case "problem":
+      return "/problem";
+    case "submit":
+      return "/submit";
+    case "submissions":
+      return "/submissions";
+    case "codeTest":
+      return "/code_test";
+    case "board":
+    default:
+      return "/board";
+  }
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = React.useState<TabId>("board");
+  const [currentPath, setCurrentPath] = React.useState<string>(() => window.location.pathname);
+
+  React.useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const activeTab: TabId = pathnameToTab(currentPath);
+
+  const navigate = (tab: TabId) => {
+    const nextPath = tabToPath(tab);
+    if (nextPath === window.location.pathname) {
+      setCurrentPath(nextPath);
+      return;
+    }
+    window.history.pushState(null, "", nextPath);
+    setCurrentPath(nextPath);
+  };
 
   return (
     <div className="board-page">
@@ -16,35 +61,35 @@ export default function App() {
         <button
           type="button"
           className={activeTab === "board" ? "tab active" : "tab"}
-          onClick={() => setActiveTab("board")}
+          onClick={() => navigate("board")}
         >
           盤面
         </button>
         <button
           type="button"
           className={activeTab === "problem" ? "tab active" : "tab"}
-          onClick={() => setActiveTab("problem")}
+          onClick={() => navigate("problem")}
         >
           問題
         </button>
         <button
           type="button"
           className={activeTab === "submit" ? "tab active" : "tab"}
-          onClick={() => setActiveTab("submit")}
+          onClick={() => navigate("submit")}
         >
           提出
         </button>
         <button
           type="button"
           className={activeTab === "submissions" ? "tab active" : "tab"}
-          onClick={() => setActiveTab("submissions")}
+          onClick={() => navigate("submissions")}
         >
           提出結果
         </button>
         <button
           type="button"
           className={activeTab === "codeTest" ? "tab active" : "tab"}
-          onClick={() => setActiveTab("codeTest")}
+          onClick={() => navigate("codeTest")}
         >
           コードテスト
         </button>
