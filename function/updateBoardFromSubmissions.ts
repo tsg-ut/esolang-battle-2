@@ -20,7 +20,7 @@ const prisma = new PrismaClient({ adapter });
  * を更新するユーティリティ関数。
  *
  * 現在のルール（暫定）:
- * - Submission.score がその言語の現在スコアより大きい場合だけ更新する。
+ * - Submission.score がその言語の現在スコアより小さい場合だけ更新する（コードゴルフ想定）。
  * - そのとき、その言語の色を Submission.user.team.color に更新する。
  * - チーム色が "red" / "blue" 以外の場合は "neutral" として扱う。
  */
@@ -73,6 +73,94 @@ export async function updateBoardFromSubmissions(boardId: number): Promise<void>
   let maxSeenSubmissionId = lastProcessedId;
 
   for (const submission of newSubmissions) {
+    const languageId = submission.languageId;
+    const key = String(languageId);
+
+    const currentScore = scoreOfLanguages[key] ?? Infinity;
+    const newScore = submission.score;
+
+    if (typeof newScore === "number" && newScore < currentScore) {
+      scoreOfLanguages[key] = newScore;
+
+      const rawColor = submission.user.team?.color?.toLowerCase() ?? "neutral";
+      const teamColor: OwnerColor =
+        rawColor === "red" || rawColor === "blue" ? (rawColor as OwnerColor) : "neutral";
+      colorOfLanguages[key] = teamColor;
+    }
+
+    if (submission.id > maxSeenSubmissionId) {
+      maxSeenSubmissionId = submission.id;
+    }
+  }
+
+  await prisma.board.update({
+    where: { id: boardId },
+    data: {
+      scoreOfLanguages,
+      colorOfLanguages,
+      lastProcessedSubmissionId: maxSeenSubmissionId,
+    },
+  });
+}
+
+/**
+ * 盤面を Submission からフル再計算するユーティリティ関数。
+ *
+ * - lastProcessedSubmissionId に関係なく、そのコンテストの全 Submission を読み出す。
+ * - Board.scoreOfLanguages / Board.colorOfLanguages を空の状態から再構築する。
+ * - lastProcessedSubmissionId を「処理した Submission の最大 id」に更新する（Submission が無ければ null）。
+ */
+export async function recomputeBoardFromSubmissions(boardId: number): Promise<void> {
+  const board = await prisma.board.findUnique({
+    where: { id: boardId },
+    include: {
+      contest: true,
+    },
+  });
+
+  if (!board) {
+    throw new Error(`Board ${boardId} not found`);
+  }
+
+  const contestId = board.contestId;
+
+  const submissions = await prisma.submission.findMany({
+    where: {
+      problem: {
+        contestId,
+      },
+    },
+    include: {
+      user: {
+        include: {
+          team: true,
+        },
+      },
+    },
+    orderBy: [
+      { submittedAt: "asc" },
+      { id: "asc" },
+    ],
+  });
+
+  if (submissions.length === 0) {
+    await prisma.board.update({
+      where: { id: boardId },
+      data: {
+        scoreOfLanguages: {},
+        colorOfLanguages: {},
+        lastProcessedSubmissionId: null,
+      },
+    });
+    return;
+  }
+
+  const scoreOfLanguages: Record<string, number> = {};
+  const colorOfLanguages: Record<string, OwnerColor> = {};
+
+  let maxSeenSubmissionId = 0;
+
+  for (const submission of submissions) {
     const languageId = submission.languageId;
     const key = String(languageId);
 

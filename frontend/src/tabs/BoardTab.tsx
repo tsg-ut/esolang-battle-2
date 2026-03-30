@@ -19,6 +19,13 @@ type BoardDto = {
   cells: BoardCellDto[];
 };
 
+type MeInfo = {
+  id: number;
+  name: string;
+  isAdmin: boolean;
+  team: { id: number; color: string } | null;
+};
+
 function cellClass(color: OwnerColor): string {
   switch (color) {
     case "red":
@@ -41,36 +48,46 @@ export function BoardTab() {
   );
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [requiresLogin, setRequiresLogin] = React.useState(false);
+  const [me, setMe] = React.useState<MeInfo | null>(null);
+  const [isLoadingMe, setIsLoadingMe] = React.useState(false);
+  const [isUpdatingBoard, setIsUpdatingBoard] = React.useState(false);
+  const [updateError, setUpdateError] = React.useState<string | null>(null);
+
+  const reloadBoard = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/boards/1");
+      if (!res.ok) {
+        throw new Error(`Failed to load board: ${res.status}`);
+      }
+      const data = (await res.json()) as BoardDto;
+
+      if (data.viewerType !== "GRID") {
+        setError("Unsupported board viewer type");
+        return;
+      }
+      setBoard(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
 
   React.useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const res = await fetch("/api/boards/1");
-        if (!res.ok) {
-          throw new Error(`Failed to load board: ${res.status}`);
-        }
-        const data = (await res.json()) as BoardDto;
-
         if (!cancelled) {
-          if (data.viewerType !== "GRID") {
-            setError("Unsupported board viewer type");
-            return;
-          }
-          setBoard(data);
+          await reloadBoard();
         }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : String(e));
-        }
+      } catch {
+        // reloadBoard 内でエラー処理済み
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadBoard]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -104,6 +121,72 @@ export function BoardTab() {
       cancelled = true;
     };
   }, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setIsLoadingMe(true);
+
+    (async () => {
+      try {
+        const res = await fetch("/api/me");
+        if (res.status === 401) {
+          if (!cancelled) setMe(null);
+          return;
+        }
+        if (!res.ok) {
+          throw new Error(`Failed to load current user: ${res.status}`);
+        }
+        const data = (await res.json()) as MeInfo;
+        if (!cancelled) setMe(data);
+      } catch {
+        if (!cancelled) setMe(null);
+      } finally {
+        if (!cancelled) setIsLoadingMe(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleUpdateBoard() {
+    setUpdateError(null);
+    setIsUpdatingBoard(true);
+    try {
+      const res = await fetch("/api/boards/1/update", { method: "POST" });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = body && typeof body.error === "string" ? body.error : `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+
+      await reloadBoard();
+    } catch (e) {
+      setUpdateError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsUpdatingBoard(false);
+    }
+  }
+
+  async function handleRecomputeBoard() {
+    setUpdateError(null);
+    setIsUpdatingBoard(true);
+    try {
+      const res = await fetch("/api/boards/1/recompute", { method: "POST" });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = body && typeof body.error === "string" ? body.error : `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+
+      await reloadBoard();
+    } catch (e) {
+      setUpdateError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsUpdatingBoard(false);
+    }
+  }
 
   React.useEffect(() => {
     if (!board) return;
@@ -147,15 +230,28 @@ export function BoardTab() {
   const { width, height, cells } = board;
 
   return (
-    <div
-      className="board"
-      style={{
-        gridTemplateColumns: `repeat(${width}, 1fr)` ,
-        gridTemplateRows: `repeat(${height}, 1fr)` ,
-        width: boardSize ? `${boardSize.width}px` : undefined,
-        height: boardSize ? `${boardSize.height}px` : undefined,
-      }}
-    >
+    <div>
+      {me && me.isAdmin && (
+        <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+          <button type="button" onClick={handleUpdateBoard} disabled={isUpdatingBoard}>
+            {isUpdatingBoard ? "盤面更新中..." : "盤面更新"}
+          </button>
+          <button type="button" onClick={handleRecomputeBoard} disabled={isUpdatingBoard}>
+            {isUpdatingBoard ? "再計算中..." : "盤面再計算"}
+          </button>
+          {updateError && <span style={{ color: "#b00020" }}>Error: {updateError}</span>}
+        </div>
+      )}
+
+      <div
+        className="board"
+        style={{
+          gridTemplateColumns: `repeat(${width}, 1fr)` ,
+          gridTemplateRows: `repeat(${height}, 1fr)` ,
+          width: boardSize ? `${boardSize.width}px` : undefined,
+          height: boardSize ? `${boardSize.height}px` : undefined,
+        }}
+      >
       {cells.map((cell, index) => (
         <div
           key={index}
@@ -218,6 +314,7 @@ export function BoardTab() {
           {toastMessage}
         </div>
       )}
+    </div>
     </div>
   );
 }

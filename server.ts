@@ -10,6 +10,10 @@ import { getLanguages } from "./function/getLanguages.js";
 import { getSubmissionDetail } from "./function/getSubmissionDetail.js";
 import { getSubmittableLanguageIdsForTeam } from "./function/getSubmittableLanguages.js";
 import { getUserInfo, verifyUserLogin } from "./function/authUser.js";
+import {
+  updateBoardFromSubmissions,
+  recomputeBoardFromSubmissions,
+} from "./function/updateBoardFromSubmissions.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -311,6 +315,76 @@ const server = http.createServer(async (req, res) => {
       const submissions = await getSubmissions(filter);
 
       return sendJson(res, 200, { submissions });
+    }
+
+    // POST /api/boards/:id/update : Board を Submission から差分更新（管理者専用）
+    if (req.method === "POST" && req.url.startsWith("/api/boards/") && req.url.endsWith("/update")) {
+      const currentUserId = getCurrentUserId(req);
+      if (!currentUserId) {
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
+      const user = await getUserInfo(currentUserId);
+      if (!user) {
+        return sendJson(res, 404, { error: "User not found" });
+      }
+      if (!user.isAdmin) {
+        return sendJson(res, 403, { error: "管理者のみ盤面を更新できます" });
+      }
+
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      const segments = url.pathname.split("/").filter(Boolean); // ["api", "boards", ":id", "update"]
+      const idSegment = segments[2];
+      const boardId = Number(idSegment);
+
+      if (!Number.isFinite(boardId) || boardId <= 0) {
+        return sendJson(res, 400, { error: "Invalid board id" });
+      }
+
+      try {
+        await updateBoardFromSubmissions(boardId);
+        return sendJson(res, 200, { ok: true });
+      } catch (e) {
+        console.error("failed to update board", e);
+        return sendJson(res, 500, { error: "Failed to update board" });
+      }
+    }
+
+    // POST /api/boards/:id/recompute : Board を Submission からフル再計算（管理者専用）
+    if (
+      req.method === "POST" &&
+      req.url.startsWith("/api/boards/") &&
+      req.url.endsWith("/recompute")
+    ) {
+      const currentUserId = getCurrentUserId(req);
+      if (!currentUserId) {
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
+      const user = await getUserInfo(currentUserId);
+      if (!user) {
+        return sendJson(res, 404, { error: "User not found" });
+      }
+      if (!user.isAdmin) {
+        return sendJson(res, 403, { error: "管理者のみ盤面を再計算できます" });
+      }
+
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      const segments = url.pathname.split("/").filter(Boolean); // ["api", "boards", ":id", "recompute"]
+      const idSegment = segments[2];
+      const boardId = Number(idSegment);
+
+      if (!Number.isFinite(boardId) || boardId <= 0) {
+        return sendJson(res, 400, { error: "Invalid board id" });
+      }
+
+      try {
+        await recomputeBoardFromSubmissions(boardId);
+        return sendJson(res, 200, { ok: true });
+      } catch (e) {
+        console.error("failed to recompute board", e);
+        return sendJson(res, 500, { error: "Failed to recompute board" });
+      }
     }
 
     // GET /api/boards/:id : Board 情報取得（盤面表示用）
