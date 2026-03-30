@@ -40,6 +40,7 @@ export function BoardTab() {
     null,
   );
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  const [requiresLogin, setRequiresLogin] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -77,6 +78,13 @@ export function BoardTab() {
     (async () => {
       try {
         const res = await fetch("/api/submittable_languages");
+        if (res.status === 401) {
+          if (!cancelled) {
+            setRequiresLogin(true);
+            setSubmittableLanguageIds(null);
+          }
+          return;
+        }
         if (!res.ok) {
           throw new Error(`Failed to load submittable languages: ${res.status}`);
         }
@@ -155,6 +163,14 @@ export function BoardTab() {
           style={cell.languageId !== null ? { cursor: "pointer" } : undefined}
           onClick={() => {
             if (cell.languageId === null) return;
+
+            if (requiresLogin) {
+              setToastMessage("ログインしていません");
+              setTimeout(() => {
+                setToastMessage(null);
+              }, 2000);
+              return;
+            }
 
             if (Array.isArray(submittableLanguageIds)) {
               if (!submittableLanguageIds.includes(cell.languageId)) {
