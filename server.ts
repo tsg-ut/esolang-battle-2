@@ -3,6 +3,9 @@ import { submitCode } from "./function/submitCode.js";
 import { runSubmission } from "./function/runSubmission.js";
 import { getSubmissions } from "./function/getSubmissions.js";
 import { getBoard } from "./function/getBoard.js";
+import { getProblem } from "./function/getProblem.js";
+import { testCode } from "./function/testCode.js";
+import { getLanguages } from "./function/getLanguages.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -78,6 +81,34 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 201, { submissionId: submission.id });
     }
 
+    // POST /api/code-test : コードテスト（DB に記録せず 1 回だけ実行）
+    if (req.method === "POST" && req.url === "/api/code-test") {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+      const rawBody = Buffer.concat(chunks).toString("utf8");
+
+      let body: any;
+      try {
+        body = rawBody ? JSON.parse(rawBody) : {};
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+
+      const { code, languageId } = body ?? {};
+
+      if (typeof code !== "string" || !code.length) {
+        return sendJson(res, 400, { error: "code is required" });
+      }
+      if (typeof languageId !== "number") {
+        return sendJson(res, 400, { error: "languageId must be a number" });
+      }
+
+      const result = await testCode({ languageId, code });
+      return sendJson(res, 200, result);
+    }
+
     // GET /api/submissions : Submission 一覧取得（自分の分のみ）
     if (req.method === "GET" && req.url.startsWith("/api/submissions")) {
       const currentUserId = getCurrentUserId(req);
@@ -123,6 +154,33 @@ const server = http.createServer(async (req, res) => {
 
       const board = await getBoard(boardId);
       return sendJson(res, 200, board);
+    }
+
+    // GET /api/languages : 使用可能な言語一覧
+    if (req.method === "GET" && req.url === "/api/languages") {
+      const langs = await getLanguages();
+      const languages = langs.map((l) => ({
+        id: l.id,
+        name: l.name,
+        description: l.description,
+      }));
+      return sendJson(res, 200, { languages });
+    }
+
+    // GET /api/problems/:id : 問題文取得（とりあえず閲覧用）
+    if (req.method === "GET" && req.url.startsWith("/api/problems/")) {
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      const segments = url.pathname.split("/").filter(Boolean); // ["api", "problems", ":id"]
+
+      const idSegment = segments[2];
+      const problemId = Number(idSegment);
+
+      if (!Number.isFinite(problemId) || problemId <= 0) {
+        return sendJson(res, 400, { error: "Invalid problem id" });
+      }
+
+      const problem = await getProblem(problemId);
+      return sendJson(res, 200, problem);
     }
 
     // 未対応パス

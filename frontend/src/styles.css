@@ -19,15 +19,51 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 24px;
-  padding: 24px;
+  padding: 72px 24px 24px;
 }
 
 .board-header {
   font-size: 32px;
   font-weight: 800;
   letter-spacing: 0.08em;
+}
+
+.tab-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 10;
+}
+
+.tab {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tab.active {
+  background: #111827;
+  color: #f9fafb;
+  border-color: #111827;
+}
+
+.tab-content {
+  margin-top: 16px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .board {
@@ -85,4 +121,79 @@ body {
   font-size: 14px;
   font-weight: 600;
   opacity: 0.9;
+}
+
+.problem-view {
+  max-width: 800px;
+}
+
+.problem-statement {
+  white-space: pre-wrap;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.problem-languages ul {
+  padding-left: 20px;
+}
+
+.submit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 800px;
+}
+
+.form-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-row input,
+.form-row textarea {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+}
+
+.form-row button {
+  align-self: flex-start;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #111827;
+  color: #f9fafb;
+  cursor: pointer;
+}
+
+.form-row button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.submit-message {
+  margin-top: 4px;
+}
+
+.submissions-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 900px;
+}
+
+.submissions-table th,
+.submissions-table td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.submissions-table th {
+  background: #f3f4f6;
 }
