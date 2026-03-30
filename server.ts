@@ -9,7 +9,7 @@ import { testCode } from "./function/testCode.js";
 import { getLanguages } from "./function/getLanguages.js";
 import { getSubmissionDetail } from "./function/getSubmissionDetail.js";
 import { getSubmittableLanguageIdsForTeam } from "./function/getSubmittableLanguages.js";
-import { getUserInfo, verifyUserLogin } from "./function/authUser.js";
+import { getUserInfo, verifyUserLogin, registerUser } from "./function/authUser.js";
 import {
   updateBoardFromSubmissions,
   recomputeBoardFromSubmissions,
@@ -110,9 +110,49 @@ const server = http.createServer(async (req, res) => {
       return sendJson(
         res,
         200,
-        { id: user.id, name: user.name, team: user.team },
+        { id: user.id, name: user.name, isAdmin: user.isAdmin, team: user.team },
         { "Set-Cookie": cookie },
       );
+    }
+
+    // POST /api/register : ユーザ新規登録＋ログイン
+    if (req.method === "POST" && req.url === "/api/register") {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+      const rawBody = Buffer.concat(chunks).toString("utf8");
+
+      let body: any;
+      try {
+        body = rawBody ? JSON.parse(rawBody) : {};
+      } catch {
+        return sendJson(res, 400, { error: "Invalid JSON" });
+      }
+
+      const { name, password } = body ?? {};
+      if (typeof name !== "string" || typeof password !== "string") {
+        return sendJson(res, 400, { error: "name and password are required" });
+      }
+
+      try {
+        const user = await registerUser(name, password);
+
+        const sid = crypto.randomUUID();
+        sessions.set(sid, user.id);
+
+        const cookie = `sid=${encodeURIComponent(sid)}; Path=/; HttpOnly; SameSite=Lax`;
+
+        return sendJson(
+          res,
+          201,
+          { id: user.id, name: user.name, isAdmin: user.isAdmin, team: user.team },
+          { "Set-Cookie": cookie },
+        );
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return sendJson(res, 400, { error: msg });
+      }
     }
 
     // POST /api/logout : セッションを破棄
