@@ -103,6 +103,12 @@ export function SubmitTab() {
       const body = (await res.json()) as { submissionId: number };
       setSubmitMessage(`提出に成功しました (ID: ${body.submissionId})`);
       setCode("");
+
+      // 提出結果タブへ遷移
+      const w = window as any;
+      if (typeof w.navigateToTab === "function") {
+        w.navigateToTab("submissions");
+      }
     } catch (e) {
       setSubmitMessage(e instanceof Error ? e.message : String(e));
     } finally {

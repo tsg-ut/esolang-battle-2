@@ -65,6 +65,11 @@ export default function App() {
     setCurrentPath(nextPath);
   };
 
+  // グローバルからもタブ遷移できるようにする（Submit 成功後など）
+  (window as any).navigateToTab = (tab: TabId) => {
+    navigate(tab);
+  };
+
   return (
     <div className="board-page">
       <div className="tab-bar">
