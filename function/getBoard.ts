@@ -133,7 +133,7 @@ export async function getBoard(boardId: number): Promise<BoardDto> {
           if (typeof placement.languageId === "number") {
             languageId = placement.languageId;
             const lang = languageById.get(languageId);
-            languageName = lang ? lang.description : null;
+            languageName = lang ? lang.name : null;
 
             const rawOwner = rawColors[String(languageId)];
             if (rawOwner === "red" || rawOwner === "blue" || rawOwner === "neutral") {
