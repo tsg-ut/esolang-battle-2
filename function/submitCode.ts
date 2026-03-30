@@ -33,8 +33,7 @@ export async function submitCode({
       code,
       codeLength: code.length,
       submittedAt: now,
-      // 採点前なのでとりあえず 0 点で登録しておく
-      score: 0,
+      score: null,
       language: { connect: { id: languageId } },
       user: { connect: { id: userId } },
       problem: { connect: { id: problemId } },

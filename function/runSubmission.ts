@@ -53,21 +53,34 @@ export async function runSubmission(submissionId: number) {
   );
   console.log(dockerResults);
 
+  let isAC = true;
   for (const testcase of submission.problem!.testCases) {
     const result = dockerResults[testcase.id]!;
 
+    const status: "AC" | "WA" | "RE" =
+          result.exitCode === 0
+            ? (result.stdout === testcase.output ? "AC" : "WA")
+            : "RE";
+
+    if (status !== "AC") {
+      isAC = false;
+    }
     await prisma.execution.create({
       data: {
         testcase: { connect: { id: testcase.id } },
         submission: { connect: { id: submission.id } },
-        status: result.exitCode === 0
-                  ? (result.stdout === testcase.output ? "AC" : "WA")
-                  : "RE",
+        status,
         stdout: result.stdout,
         stderr: result.stderr,
         executionTime: result.durationMs,
         executedAt: new Date(),
       },
+    });
+  }
+  if (isAC) {
+    await prisma.submission.update({
+      where: { id: submission.id },
+      data: { score: submission.codeLength },
     });
   }
 }
