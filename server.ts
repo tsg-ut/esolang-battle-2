@@ -2,6 +2,7 @@ import http from "http";
 import { submitCode } from "./function/submitCode.js";
 import { runSubmission } from "./function/runSubmission.js";
 import { getSubmissions } from "./function/getSubmissions.js";
+import { getBoard } from "./function/getBoard.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -106,6 +107,22 @@ const server = http.createServer(async (req, res) => {
       const submissions = await getSubmissions(filter);
 
       return sendJson(res, 200, { submissions });
+    }
+
+    // GET /api/boards/:id : Board 情報取得（盤面表示用）
+    if (req.method === "GET" && req.url.startsWith("/api/boards/")) {
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      const segments = url.pathname.split("/").filter(Boolean); // ["api", "boards", ":id"]
+
+      const idSegment = segments[2];
+      const boardId = Number(idSegment);
+
+      if (!Number.isFinite(boardId) || boardId <= 0) {
+        return sendJson(res, 400, { error: "Invalid board id" });
+      }
+
+      const board = await getBoard(boardId);
+      return sendJson(res, 200, board);
     }
 
     // 未対応パス
