@@ -13,6 +13,7 @@ export function SubmitTab() {
 
   const [code, setCode] = React.useState("");
   const [selectedLanguageId, setSelectedLanguageId] = React.useState<string>("");
+  const [problemIdInput, setProblemIdInput] = React.useState<string>("1");
   const [submitMessage, setSubmitMessage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -56,6 +57,11 @@ export function SubmitTab() {
         throw new Error("languageId must be a positive number");
       }
 
+      const problemId = Number(problemIdInput);
+      if (!Number.isFinite(problemId) || problemId <= 0) {
+        throw new Error("problemId must be a positive number");
+      }
+
       const res = await fetch("/api/submissions", {
         method: "POST",
         headers: {
@@ -65,7 +71,7 @@ export function SubmitTab() {
         body: JSON.stringify({
           code,
           languageId,
-          problemId: 1,
+          problemId,
         }),
       });
 
@@ -99,6 +105,17 @@ export function SubmitTab() {
 
   return (
     <form className="submit-form" onSubmit={handleSubmit}>
+      <div className="form-row">
+        <label>
+          問題ID:
+          <input
+            type="number"
+            min={1}
+            value={problemIdInput}
+            onChange={(e) => setProblemIdInput(e.target.value)}
+          />
+        </label>
+      </div>
       <div className="form-row">
         <label>
           言語:
