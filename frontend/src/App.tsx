@@ -7,6 +7,13 @@ import { CodeTestTab } from "./tabs/CodeTestTab";
 import { UserTab } from "./tabs/UserTab";
 import { AdminUsersTab } from "./tabs/AdminUsersTab";
 
+type MeInfo = {
+  id: number;
+  name: string;
+  isAdmin: boolean;
+  team: { id: number; color: string } | null;
+};
+
 type TabId =
   | "board"
   | "problem"
@@ -49,6 +56,8 @@ function tabToPath(tab: TabId): string {
 
 export default function App() {
   const [currentPath, setCurrentPath] = React.useState<string>(() => window.location.pathname);
+  const [me, setMe] = React.useState<MeInfo | null>(null);
+  const [isLoadingMe, setIsLoadingMe] = React.useState(false);
 
   React.useEffect(() => {
     // 初回に "/" へアクセスされた場合は /board にリダイレクト
@@ -62,6 +71,33 @@ export default function App() {
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setIsLoadingMe(true);
+
+    (async () => {
+      try {
+        const res = await fetch("/api/me");
+        if (res.status === 401) {
+          if (!cancelled) setMe(null);
+        } else if (!res.ok) {
+          if (!cancelled) setMe(null);
+        } else {
+          const data = (await res.json()) as MeInfo;
+          if (!cancelled) setMe(data);
+        }
+      } catch {
+        if (!cancelled) setMe(null);
+      } finally {
+        if (!cancelled) setIsLoadingMe(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const activeTab: TabId = pathnameToTab(currentPath);
@@ -80,6 +116,12 @@ export default function App() {
   (window as any).navigateToTab = (tab: TabId) => {
     navigate(tab);
   };
+
+  React.useEffect(() => {
+    if (activeTab === "adminUsers" && (!me || !me.isAdmin)) {
+      navigate("board");
+    }
+  }, [activeTab, me]);
 
   return (
     <div className="board-page">
@@ -126,13 +168,15 @@ export default function App() {
         >
           ユーザ
         </button>
-        <button
-          type="button"
-          className={activeTab === "adminUsers" ? "tab active" : "tab"}
-          onClick={() => navigate("adminUsers")}
-        >
-          Admin
-        </button>
+        {me && me.isAdmin && (
+          <button
+            type="button"
+            className={activeTab === "adminUsers" ? "tab active" : "tab"}
+            onClick={() => navigate("adminUsers")}
+          >
+            Admin
+          </button>
+        )}
       </div>
 
       <div className="tab-content">
@@ -142,7 +186,7 @@ export default function App() {
         {activeTab === "submissions" && <SubmissionsTab />}
         {activeTab === "codeTest" && <CodeTestTab />}
         {activeTab === "user" && <UserTab />}
-        {activeTab === "adminUsers" && <AdminUsersTab />}
+        {activeTab === "adminUsers" && me && me.isAdmin && <AdminUsersTab />}
       </div>
     </div>
   );
