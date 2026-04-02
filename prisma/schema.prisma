@@ -39,6 +39,7 @@ model Team {
 /// A contest in which users compete by code golf
 model Contest {
   id         Int                 @id @default(autoincrement())
+  name       String
   viewerType ContestViewerType
   startAt    DateTime
   endAt      DateTime
