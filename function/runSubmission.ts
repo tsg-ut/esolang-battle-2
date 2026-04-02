@@ -57,10 +57,19 @@ export async function runSubmission(submissionId: number) {
   for (const testcase of submission.problem!.testCases) {
     const result = dockerResults[testcase.id]!;
 
-    const status: "AC" | "WA" | "RE" =
-          result.exitCode === 0
-            ? (result.stdout === testcase.output ? "AC" : "WA")
-            : "RE";
+    let status: "AC" | "WA" | "RE";
+    if (result.exitCode === 0) {
+      const resultStdOut = result.stdout.trim().split(/\s+/);
+      const expectedStdOut = testcase.output.trim().split(/\s+/);
+      
+      if (resultStdOut.length === expectedStdOut.length && resultStdOut.every((value, index) => value === expectedStdOut[index])) {
+        status = "AC";
+      } else {
+        status = "WA";
+      }
+    } else {
+      status = "RE";
+    }
 
     if (status !== "AC") {
       isAC = false;
