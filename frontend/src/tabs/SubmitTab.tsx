@@ -11,7 +11,7 @@ type ProblemSummary = {
   title: string;
 };
 
-export function SubmitTab() {
+export function SubmitTab(props: { contestId: number }) {
   const [languages, setLanguages] = React.useState<LanguageSummary[] | null>(null);
   const [languagesError, setLanguagesError] = React.useState<string | null>(null);
   const [isLoadingLanguages, setIsLoadingLanguages] = React.useState(false);
@@ -121,7 +121,7 @@ export function SubmitTab() {
         throw new Error("problemId must be a positive number");
       }
 
-      const res = await fetch("/api/submissions", {
+      const res = await fetch(`/api/contests/${props.contestId}/submissions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

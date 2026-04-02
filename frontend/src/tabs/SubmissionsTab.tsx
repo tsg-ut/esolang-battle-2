@@ -45,7 +45,7 @@ type MeInfo = {
 
 type Scope = "self" | "team" | "all";
 
-export function SubmissionsTab() {
+export function SubmissionsTab(props: { contestId: number }) {
   const [me, setMe] = React.useState<MeInfo | null>(null);
   const [meError, setMeError] = React.useState<string | null>(null);
   const [isLoadingMe, setIsLoadingMe] = React.useState(false);
@@ -104,7 +104,9 @@ export function SubmissionsTab() {
       try {
         const params = new URLSearchParams();
         params.set("scope", scope);
-        const res = await fetch(`/api/submissions?${params.toString()}`);
+        const res = await fetch(
+          `/api/contests/${props.contestId}/submissions?${params.toString()}`,
+        );
         const body = await res.json().catch(() => null);
         if (!res.ok) {
           const msg = body && typeof body.error === "string"

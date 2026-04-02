@@ -18,6 +18,7 @@ export type GetSubmissionsFilter = {
   teamId?: number;
   problemId?: number;
   languageId?: number;
+  contestId?: number;
 };
 
 export async function getSubmissions(filter: GetSubmissionsFilter = {}) {
@@ -34,6 +35,10 @@ export async function getSubmissions(filter: GetSubmissionsFilter = {}) {
   }
   if (typeof filter.languageId === "number") {
     where.languageId = filter.languageId;
+  }
+
+  if (typeof filter.contestId === "number") {
+    where.problem = { ...(where.problem ?? {}), contestId: filter.contestId };
   }
 
   const submissions = await prisma.submission.findMany({

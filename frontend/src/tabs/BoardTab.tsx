@@ -37,7 +37,7 @@ function cellClass(color: OwnerColor): string {
   }
 }
 
-export function BoardTab() {
+export function BoardTab({ contestId }: { contestId: number }) {
   const [board, setBoard] = React.useState<BoardDto | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [boardSize, setBoardSize] = React.useState<{ width: number; height: number } | null>(
@@ -55,7 +55,7 @@ export function BoardTab() {
 
   const reloadBoard = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/boards/1");
+      const res = await fetch(`/api/contests/${contestId}/board`);
       if (!res.ok) {
         throw new Error(`Failed to load board: ${res.status}`);
       }
@@ -69,7 +69,7 @@ export function BoardTab() {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+  }, [contestId]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -154,7 +154,7 @@ export function BoardTab() {
     setUpdateError(null);
     setIsUpdatingBoard(true);
     try {
-      const res = await fetch("/api/boards/1/update", { method: "POST" });
+      const res = await fetch(`/api/contests/${contestId}/board/update`, { method: "POST" });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
         const msg = body && typeof body.error === "string" ? body.error : `HTTP ${res.status}`;
@@ -173,7 +173,7 @@ export function BoardTab() {
     setUpdateError(null);
     setIsUpdatingBoard(true);
     try {
-      const res = await fetch("/api/boards/1/recompute", { method: "POST" });
+      const res = await fetch(`/api/contests/${contestId}/board/recompute`, { method: "POST" });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
         const msg = body && typeof body.error === "string" ? body.error : `HTTP ${res.status}`;
@@ -279,7 +279,7 @@ export function BoardTab() {
             }
 
             const url = new URL(window.location.href);
-            url.pathname = "/submit";
+            url.pathname = `/contest/${contestId}/submit`;
             url.searchParams.set("languageId", String(cell.languageId));
             window.history.pushState(null, "", url.toString());
             window.dispatchEvent(new PopStateEvent("popstate"));

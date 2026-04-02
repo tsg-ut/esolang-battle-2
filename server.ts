@@ -4,6 +4,7 @@ import { submitCode } from "./function/submitCode.js";
 import { runSubmission } from "./function/runSubmission.js";
 import { getSubmissions } from "./function/getSubmissions.js";
 import { getBoard } from "./function/getBoard.js";
+import { getContests } from "./function/getContests.js";
 import { getProblem, getFirstProblemByIdAsc } from "./function/getProblem.js";
 import { listProblems } from "./function/listProblems.js";
 import { testCode } from "./function/testCode.js";
@@ -592,6 +593,106 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 201, { submissionId: submission.id });
     }
 
+    // POST /api/contests/:contestId/submissions : コンテスト単位でのコード提出（認証必須）
+    if (req.method === "POST" && req.url.startsWith("/api/contests/")) {
+      const currentUserId = getCurrentUserId(req);
+      if (!currentUserId) {
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      if (!url.pathname.endsWith("/submissions")) {
+        // 他の /api/contests/* 用ルートに委ねる
+      } else {
+        const segments = url.pathname.split("/").filter(Boolean); // ["api","contests",":contestId","submissions"]
+      const contestIdSegment = segments[2];
+      const contestId = Number(contestIdSegment);
+      if (!Number.isFinite(contestId) || contestId <= 0) {
+        return sendJson(res, 400, { error: "Invalid contest id" });
+      }
+
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) {
+          chunks.push(chunk as Buffer);
+        }
+        const rawBody = Buffer.concat(chunks).toString("utf8");
+
+        let body: any;
+        try {
+          body = rawBody ? JSON.parse(rawBody) : {};
+        } catch {
+          return sendJson(res, 400, { error: "Invalid JSON" });
+        }
+
+        const { code, languageId, problemId } = body ?? {};
+
+        if (typeof code !== "string" || !code.length) {
+          return sendJson(res, 400, { error: "code is required" });
+        }
+        if (typeof languageId !== "number") {
+          return sendJson(res, 400, { error: "languageId must be a number" });
+        }
+        if (typeof problemId !== "number") {
+          return sendJson(res, 400, { error: "problemId must be a number" });
+        }
+
+      // problem がこの contest に属しているか検証
+        const { PrismaClient } = await import("./generated/prisma/client.js");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+      const { Pool } = await import("pg");
+      const databaseUrlLocal = process.env.DATABASE_URL;
+      if (!databaseUrlLocal) {
+        throw new Error("DATABASE_URL environment variable is not set");
+      }
+      const poolLocal = new Pool({ connectionString: databaseUrlLocal });
+      const adapterLocal = new PrismaPg(poolLocal);
+        const prismaLocal = new PrismaClient({ adapter: adapterLocal });
+
+        try {
+          const problem = await prismaLocal.problem.findUnique({ where: { id: problemId } });
+          if (!problem || problem.contestId !== contestId) {
+            return sendJson(res, 400, { error: "problem does not belong to this contest" });
+          }
+
+        // 0. 盤面ルールに基づく提出可否チェック
+          const user = await getUserInfo(currentUserId);
+          if (!user || !user.team) {
+            return sendJson(res, 400, { error: "チーム未所属のため提出できません" });
+          }
+
+          const team = await prismaLocal.team.findUnique({ where: { id: user.team.id } });
+          if (!team || team.contestId !== contestId) {
+            return sendJson(res, 400, { error: "このコンテストのチームではありません" });
+          }
+
+          const board = await prismaLocal.board.findUnique({ where: { contestId } });
+          if (!board) {
+            return sendJson(res, 400, { error: "Board for this contest not found" });
+          }
+
+          const submittableLanguageIds = await getSubmittableLanguageIdsForTeam(board.id, user.team.id);
+          if (!submittableLanguageIds.includes(languageId)) {
+            return sendJson(res, 400, { error: "提出できません" });
+          }
+
+          // 1. Submission を作成
+          const submission = await submitCode({
+            code,
+            languageId,
+            userId: currentUserId,
+            problemId,
+          });
+
+          // 2. 採点
+          await runSubmission(submission.id);
+
+          return sendJson(res, 201, { submissionId: submission.id });
+        } finally {
+          await prismaLocal.$disconnect();
+        }
+      }
+    }
+
     // POST /api/code-test : コードテスト（DB に記録せず 1 回だけ実行）
     if (req.method === "POST" && req.url === "/api/code-test") {
       const chunks: Buffer[] = [];
@@ -703,6 +804,98 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { submissions });
     }
 
+    // GET /api/contests/:contestId/submissions : コンテスト単位の Submission 一覧
+    if (req.method === "GET" && req.url.startsWith("/api/contests/")) {
+      const currentUserId = getCurrentUserId(req);
+      if (!currentUserId) {
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      if (!url.pathname.endsWith("/submissions")) {
+        // 他の /api/contests/* 用ルートに委ねる
+      } else {
+      const segments = url.pathname.split("/").filter(Boolean); // ["api","contests",":contestId","submissions"]
+      const contestIdSegment = segments[2];
+      const contestId = Number(contestIdSegment);
+      if (!Number.isFinite(contestId) || contestId <= 0) {
+        return sendJson(res, 400, { error: "Invalid contest id" });
+      }
+
+      const toNumber = (v: string | null): number | undefined => {
+        if (v === null) return undefined;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : undefined;
+      };
+
+      const problemIdParam = url.searchParams.get("problemId");
+      const languageIdParam = url.searchParams.get("languageId");
+      const scopeParam = url.searchParams.get("scope");
+
+      const problemId = toNumber(problemIdParam);
+      const languageId = toNumber(languageIdParam);
+      const scope = scopeParam === "team" || scopeParam === "all" ? scopeParam : "self";
+
+      const user = await getUserInfo(currentUserId);
+      if (!user) {
+        return sendJson(res, 404, { error: "User not found" });
+      }
+
+      type SubmissionsFilter = {
+        userId?: number;
+        teamId?: number;
+        problemId?: number;
+        languageId?: number;
+        contestId?: number;
+      };
+
+      const filter: SubmissionsFilter = { contestId };
+
+      if (scope === "self") {
+        filter.userId = currentUserId;
+      } else if (scope === "team") {
+        if (!user.team) {
+          return sendJson(res, 400, { error: "チーム未所属のためチーム提出は参照できません" });
+        }
+
+        const { PrismaClient } = await import("./generated/prisma/client.js");
+        const { PrismaPg } = await import("@prisma/adapter-pg");
+        const { Pool } = await import("pg");
+        const databaseUrlLocal = process.env.DATABASE_URL;
+        if (!databaseUrlLocal) {
+          throw new Error("DATABASE_URL environment variable is not set");
+        }
+        const poolLocal = new Pool({ connectionString: databaseUrlLocal });
+        const adapterLocal = new PrismaPg(poolLocal);
+        const prismaLocal = new PrismaClient({ adapter: adapterLocal });
+
+        try {
+          const team = await prismaLocal.team.findUnique({ where: { id: user.team.id } });
+          if (!team || team.contestId !== contestId) {
+            return sendJson(res, 400, { error: "このコンテストのチームではありません" });
+          }
+        } finally {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          prismaLocal.$disconnect();
+        }
+
+        filter.teamId = user.team.id;
+      } else if (scope === "all") {
+        if (!user.isAdmin) {
+          return sendJson(res, 403, { error: "管理者のみ全ての提出を参照できます" });
+        }
+        // no additional filter: all submissions in this contest
+      }
+
+      if (typeof problemId === "number") filter.problemId = problemId;
+      if (typeof languageId === "number") filter.languageId = languageId;
+
+      const submissions = await getSubmissions(filter);
+
+      return sendJson(res, 200, { submissions });
+      }
+    }
+
     // POST /api/boards/:id/update : Board を Submission から差分更新（管理者専用）
     if (req.method === "POST" && req.url.startsWith("/api/boards/") && req.url.endsWith("/update")) {
       const currentUserId = getCurrentUserId(req);
@@ -789,7 +982,152 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, board);
     }
 
-    // GET /api/submittable_languages : 盤面ルール上、現在提出可能な languageId 一覧（暫定で boardId=1, teamId=1）
+    // GET /api/contests/:contestId/board : コンテストに紐づく Board 表示用
+    if (req.method === "GET" && req.url.startsWith("/api/contests/") && req.url.endsWith("/board")) {
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      const segments = url.pathname.split("/").filter(Boolean); // ["api","contests",":contestId","board"]
+
+      const contestIdSegment = segments[2];
+      const contestId = Number(contestIdSegment);
+
+      if (!Number.isFinite(contestId) || contestId <= 0) {
+        return sendJson(res, 400, { error: "Invalid contest id" });
+      }
+
+      const { PrismaClient } = await import("./generated/prisma/client.js");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+      const { Pool } = await import("pg");
+      const databaseUrlLocal = process.env.DATABASE_URL;
+      if (!databaseUrlLocal) {
+        throw new Error("DATABASE_URL environment variable is not set");
+      }
+      const poolLocal = new Pool({ connectionString: databaseUrlLocal });
+      const adapterLocal = new PrismaPg(poolLocal);
+      const prismaLocal = new PrismaClient({ adapter: adapterLocal });
+
+      try {
+        const board = await prismaLocal.board.findUnique({ where: { contestId } });
+        if (!board) {
+          return sendJson(res, 404, { error: "Board not found for contest" });
+        }
+        const dto = await getBoard(board.id);
+        return sendJson(res, 200, dto);
+      } finally {
+        await prismaLocal.$disconnect();
+      }
+    }
+
+    // POST /api/contests/:contestId/board/update : コンテストの Board を Submission から差分更新（管理者専用）
+    if (
+      req.method === "POST" &&
+      req.url.startsWith("/api/contests/") &&
+      req.url.endsWith("/board/update")
+    ) {
+      const currentUserId = getCurrentUserId(req);
+      if (!currentUserId) {
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
+      const user = await getUserInfo(currentUserId);
+      if (!user) {
+        return sendJson(res, 404, { error: "User not found" });
+      }
+      if (!user.isAdmin) {
+        return sendJson(res, 403, { error: "管理者のみ盤面を更新できます" });
+      }
+
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      const segments = url.pathname.split("/").filter(Boolean); // ["api","contests",":contestId","board","update"]
+      const contestIdSegment = segments[2];
+      const contestId = Number(contestIdSegment);
+
+      if (!Number.isFinite(contestId) || contestId <= 0) {
+        return sendJson(res, 400, { error: "Invalid contest id" });
+      }
+
+      const { PrismaClient } = await import("./generated/prisma/client.js");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+      const { Pool } = await import("pg");
+      const databaseUrlLocal = process.env.DATABASE_URL;
+      if (!databaseUrlLocal) {
+        throw new Error("DATABASE_URL environment variable is not set");
+      }
+      const poolLocal = new Pool({ connectionString: databaseUrlLocal });
+      const adapterLocal = new PrismaPg(poolLocal);
+      const prismaLocal = new PrismaClient({ adapter: adapterLocal });
+
+      try {
+        const board = await prismaLocal.board.findUnique({ where: { contestId } });
+        if (!board) {
+          return sendJson(res, 404, { error: "Board not found for contest" });
+        }
+
+        await updateBoardFromSubmissions(board.id);
+        return sendJson(res, 200, { ok: true });
+      } catch (e) {
+        console.error("failed to update board for contest", e);
+        return sendJson(res, 500, { error: "Failed to update board" });
+      } finally {
+        await prismaLocal.$disconnect();
+      }
+    }
+
+    // POST /api/contests/:contestId/board/recompute : コンテストの Board を Submission からフル再計算（管理者専用）
+    if (
+      req.method === "POST" &&
+      req.url.startsWith("/api/contests/") &&
+      req.url.endsWith("/board/recompute")
+    ) {
+      const currentUserId = getCurrentUserId(req);
+      if (!currentUserId) {
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
+      const user = await getUserInfo(currentUserId);
+      if (!user) {
+        return sendJson(res, 404, { error: "User not found" });
+      }
+      if (!user.isAdmin) {
+        return sendJson(res, 403, { error: "管理者のみ盤面を再計算できます" });
+      }
+
+      const url = new URL(req.url, `http://localhost:${PORT}`);
+      const segments = url.pathname.split("/").filter(Boolean); // ["api","contests",":contestId","board","recompute"]
+      const contestIdSegment = segments[2];
+      const contestId = Number(contestIdSegment);
+
+      if (!Number.isFinite(contestId) || contestId <= 0) {
+        return sendJson(res, 400, { error: "Invalid contest id" });
+      }
+
+      const { PrismaClient } = await import("./generated/prisma/client.js");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+      const { Pool } = await import("pg");
+      const databaseUrlLocal = process.env.DATABASE_URL;
+      if (!databaseUrlLocal) {
+        throw new Error("DATABASE_URL environment variable is not set");
+      }
+      const poolLocal = new Pool({ connectionString: databaseUrlLocal });
+      const adapterLocal = new PrismaPg(poolLocal);
+      const prismaLocal = new PrismaClient({ adapter: adapterLocal });
+
+      try {
+        const board = await prismaLocal.board.findUnique({ where: { contestId } });
+        if (!board) {
+          return sendJson(res, 404, { error: "Board not found for contest" });
+        }
+
+        await recomputeBoardFromSubmissions(board.id);
+        return sendJson(res, 200, { ok: true });
+      } catch (e) {
+        console.error("failed to recompute board for contest", e);
+        return sendJson(res, 500, { error: "Failed to recompute board" });
+      } finally {
+        await prismaLocal.$disconnect();
+      }
+    }
+
+    // GET /api/submittable_languages : 盤面ルール上、現在提出可能な languageId 一覧（ユーザの所属コンテストの Board に基づく）
     if (req.method === "GET" && req.url.startsWith("/api/submittable_languages")) {
       try {
         const currentUserId = getCurrentUserId(req);
@@ -802,10 +1140,35 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { error: "チーム未所属のため提出可能言語を計算できません" });
         }
 
-        const boardId = 1;
-        const teamId = user.team.id;
-        const languageIds = await getSubmittableLanguageIdsForTeam(boardId, teamId);
-        return sendJson(res, 200, { languageIds });
+        // ユーザの所属チームのコンテストに紐づく Board を取得
+        const { PrismaClient } = await import("./generated/prisma/client.js");
+        const { PrismaPg } = await import("@prisma/adapter-pg");
+        const { Pool } = await import("pg");
+        const databaseUrlLocal = process.env.DATABASE_URL;
+        if (!databaseUrlLocal) {
+          throw new Error("DATABASE_URL environment variable is not set");
+        }
+        const poolLocal = new Pool({ connectionString: databaseUrlLocal });
+        const adapterLocal = new PrismaPg(poolLocal);
+        const prismaLocal = new PrismaClient({ adapter: adapterLocal });
+
+        try {
+          const team = await prismaLocal.team.findUnique({ where: { id: user.team.id } });
+          if (!team) {
+            return sendJson(res, 400, { error: "所属チームが存在しません" });
+          }
+
+          const boardForContest = await prismaLocal.board.findUnique({ where: { contestId: team.contestId } });
+          if (!boardForContest) {
+            return sendJson(res, 404, { error: "Board not found for contest" });
+          }
+
+          const teamId = user.team.id;
+          const languageIds = await getSubmittableLanguageIdsForTeam(boardForContest.id, teamId);
+          return sendJson(res, 200, { languageIds });
+        } finally {
+          await prismaLocal.$disconnect();
+        }
       } catch (e) {
         console.error("failed to get submittable languages", e);
         return sendJson(res, 500, { error: "Failed to get submittable languages" });
@@ -827,6 +1190,12 @@ const server = http.createServer(async (req, res) => {
         description: l.description,
       }));
       return sendJson(res, 200, { languages });
+    }
+
+    // GET /api/contests : コンテスト一覧
+    if (req.method === "GET" && req.url === "/api/contests") {
+      const contests = await getContests();
+      return sendJson(res, 200, { contests });
     }
 
     // GET /api/problems_list : 問題一覧（id, title）

@@ -29,7 +29,8 @@ type AdminTestCase = {
   checkerScript: string | null;
 };
 
-export function ProblemTab() {
+export function ProblemTab({ contestId }: { contestId: number }) {
+  void contestId; // 現状はコンテスト共通の先頭問題を表示
   const [problem, setProblem] = React.useState<ProblemDto | null>(null);
   const [problemError, setProblemError] = React.useState<string | null>(null);
   const [isLoadingProblem, setIsLoadingProblem] = React.useState(false);

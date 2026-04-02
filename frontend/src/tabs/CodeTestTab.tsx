@@ -13,7 +13,8 @@ type CodeTestResult = {
   durationMs: number;
 };
 
-export function CodeTestTab() {
+export function CodeTestTab({ contestId }: { contestId: number }) {
+  void contestId; // contest 非依存だがインターフェイスを揃える
   const [languages, setLanguages] = React.useState<LanguageSummary[] | null>(null);
   const [languagesError, setLanguagesError] = React.useState<string | null>(null);
   const [isLoadingLanguages, setIsLoadingLanguages] = React.useState(false);
