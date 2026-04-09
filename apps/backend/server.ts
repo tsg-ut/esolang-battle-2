@@ -10,147 +10,19 @@ import { verifyUserLogin, getUserInfo, registerUser } from './function/authUser.
 import { z } from 'zod';
 import type { UserInfo } from '@esolang-battle/common';
 
-import { getContests } from './function/getContests.js';
-import { submitCode } from './function/submitCode.js';
-import { submissionQueue } from './queue.js';
-import { getBoard } from './function/getBoard.js';
-import { getProblem } from './function/getProblem.js';
-import { listProblems } from './function/listProblems.js';
-import { getSubmissions } from './function/getSubmissions.js';
-import { getLanguages } from './function/getLanguages.js';
-import { getSubmittableLanguageIdsForTeam } from './function/getSubmittableLanguages.js';
-import { getUsersWithTeams } from './function/getUsers.js';
-import { getTeams } from './function/getTeams.js';
-import { testCode } from './function/testCode.js';
+import { contestRouter } from './routers/contest.js';
+import { problemRouter } from './routers/problem.js';
+import { submissionRouter } from './routers/submission.js';
+import { userRouter } from './routers/user.js';
+import { adminRouter } from './routers/admin.js';
 
 // --- tRPC Router ---
 const appRouter = router({
-  me: publicProcedure.query(({ ctx }) => {
-    return ctx.user ?? null;
-  }),
-  getContests: publicProcedure.query(async ({ ctx }) => {
-    return await getContests(ctx.prisma);
-  }),
-  getBoard: publicProcedure
-    .input(z.object({ contestId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      return await getBoard(ctx.prisma, input.contestId);
-    }),
-  getProblem: publicProcedure
-    .input(z.object({ problemId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      return await getProblem(ctx.prisma, input.problemId);
-    }),
-  listProblems: publicProcedure
-    .input(z.object({ contestId: z.number().optional() }))
-    .query(async ({ ctx, input }) => {
-      return await listProblems(ctx.prisma, input.contestId);
-    }),
-  getSubmissions: publicProcedure
-    .input(z.object({
-      userId: z.number().optional(),
-      teamId: z.number().optional(),
-      problemId: z.number().optional(),
-      languageId: z.number().optional(),
-      contestId: z.number().optional(),
-    }).optional())
-    .query(async ({ ctx, input }) => {
-      return await getSubmissions(ctx.prisma, input ?? {});
-    }),
-  getLanguages: publicProcedure.query(async ({ ctx }) => {
-    return await getLanguages(ctx.prisma);
-  }),
-  testCode: publicProcedure
-    .input(z.object({
-      code: z.string(),
-      languageId: z.number(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      return await testCode(ctx.prisma, input);
-    }),
-  getSubmittableLanguageIdsForTeam: protectedProcedure
-    .input(z.object({ teamId: z.number(), contestId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      return await getSubmittableLanguageIdsForTeam(ctx.prisma, input.teamId, input.contestId);
-    }),
-  submitCode: protectedProcedure
-    .input(z.object({
-      code: z.string(),
-      languageId: z.number(),
-      problemId: z.number(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const submission = await submitCode(ctx.prisma, {
-        ...input,
-        userId: ctx.user.id,
-      });
-      await submissionQueue.add('evaluate', { submissionId: submission.id });
-      return submission;
-    }),
-  // Admin Procedures
-  getUsers: adminProcedure.query(async ({ ctx }) => {
-    return await getUsersWithTeams(ctx.prisma);
-  }),
-  getTeams: adminProcedure.query(async ({ ctx }) => {
-    return await getTeams(ctx.prisma);
-  }),
-  getProblems: adminProcedure
-    .input(z.object({ contestId: z.number().optional() }).optional())
-    .query(async ({ ctx, input }) => {
-      return await listProblems(ctx.prisma, input?.contestId);
-    }),
-  upsertProblem: adminProcedure
-    .input(z.object({
-      id: z.number().nullable(),
-      contestId: z.number(),
-      title: z.string(),
-      problemStatement: z.string(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input;
-      if (id) {
-        return await ctx.prisma.problem.update({
-          where: { id },
-          data,
-        });
-      } else {
-        return await ctx.prisma.problem.create({
-          data,
-        });
-      }
-    }),
-  updateUserTeam: adminProcedure
-    .input(z.object({
-      userId: z.number(),
-      teamId: z.number().nullable(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const { userId, teamId } = input;
-      // チーム所属を全解除して、新しいチームを追加（簡易実装）
-      // Team と User は N:N なので、一度 disconnect する必要がある
-      const user = await ctx.prisma.user.findUnique({
-        where: { id: userId },
-        include: { teams: true },
-      });
-      if (!user) throw new Error("User not found");
-
-      return await ctx.prisma.user.update({
-        where: { id: userId },
-        data: {
-          teams: {
-            set: teamId ? [{ id: teamId }] : [],
-          },
-        },
-        include: {
-          teams: true,
-        },
-      });
-    }),
-  register: publicProcedure
-    .input(z.object({ name: z.string(), password: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      return await registerUser(ctx.prisma, input.name, input.password);
-    }),
+  ...userRouter._def.procedures,
+  ...contestRouter._def.procedures,
+  ...problemRouter._def.procedures,
+  ...submissionRouter._def.procedures,
+  ...adminRouter._def.procedures,
 });
 
 export type AppRouter = typeof appRouter;
