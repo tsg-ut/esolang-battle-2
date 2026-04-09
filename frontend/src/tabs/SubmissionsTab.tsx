@@ -5,7 +5,7 @@ type SubmissionSummary = {
   codeLength: number;
   score: number;
   submittedAt: string;
-  user: { id: number; name: string; team: { id: number; color: string } | null };
+  user: { id: number; name: string; teams: { id: number; color: string; contestId: number }[] };
   language: { id: number; name: string; description: string };
   problem: { id: number; title: string };
 };
@@ -40,7 +40,7 @@ type MeInfo = {
   id: number;
   name: string;
   isAdmin: boolean;
-  team: { id: number; color: string } | null;
+  teams: { id: number; color: string; contestId: number }[];
 };
 
 type Scope = "self" | "team" | "all";
@@ -60,6 +60,8 @@ export function SubmissionsTab(props: { contestId: number }) {
   const [detail, setDetail] = React.useState<SubmissionDetail | null>(null);
   const [detailError, setDetailError] = React.useState<string | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = React.useState(false);
+
+  const myTeamInContest = me?.teams.find((t) => t.contestId === props.contestId);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -166,7 +168,7 @@ export function SubmissionsTab(props: { contestId: number }) {
           <button
             type="button"
             onClick={() => setScope("team")}
-            disabled={scope === "team" || isLoadingSubmissions || !me || !me.team}
+            disabled={scope === "team" || isLoadingSubmissions || !myTeamInContest}
           >
             自チームの提出
           </button>
@@ -218,7 +220,7 @@ export function SubmissionsTab(props: { contestId: number }) {
             >
               <td>{s.id}</td>
               <td>{s.user.name}</td>
-              <td>{s.user.team ? s.user.team.color : "-"}</td>
+              <td>{s.user.teams.find((t) => t.contestId === props.contestId)?.color ?? "-"}</td>
               <td>{s.problem.title}</td>
               <td>{s.language.name}</td>
               <td>{s.codeLength}</td>

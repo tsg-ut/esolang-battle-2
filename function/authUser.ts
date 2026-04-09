@@ -18,13 +18,13 @@ export type UserInfo = {
   id: number;
   name: string;
   isAdmin: boolean;
-  team: { id: number; color: string } | null;
+  teams: { id: number; color: string, contestId: number }[];
 };
 
 export async function verifyUserLogin(name: string, password: string): Promise<UserInfo | null> {
   const user = await prisma.user.findFirst({
     where: { name },
-    include: { team: true },
+    include: { teams: true },
   });
 
   if (!user) return null;
@@ -37,7 +37,7 @@ export async function verifyUserLogin(name: string, password: string): Promise<U
     id: user.id,
     name: user.name,
     isAdmin: Boolean(user.isAdmin),
-    team: user.team ? { id: user.team.id, color: user.team.color } : null,
+    teams: user.teams.map((t) => ({ id: t.id, color: t.color, contestId: t.contestId })),
   };
 }
 
@@ -55,7 +55,7 @@ export async function registerUser(name: string, password: string): Promise<User
       password: hashed,
     },
     include: {
-      team: true,
+      teams: true,
     },
   });
 
@@ -63,14 +63,14 @@ export async function registerUser(name: string, password: string): Promise<User
     id: created.id,
     name: created.name,
     isAdmin: Boolean(created.isAdmin),
-    team: created.team ? { id: created.team.id, color: created.team.color } : null,
+    teams: created.teams.map((t) => ({ id: t.id, color: t.color, contestId: t.contestId })),
   };
 }
 
 export async function getUserInfo(userId: number): Promise<UserInfo | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { team: true },
+    include: { teams: true },
   });
 
   if (!user) return null;
@@ -79,6 +79,6 @@ export async function getUserInfo(userId: number): Promise<UserInfo | null> {
     id: user.id,
     name: user.name,
     isAdmin: Boolean(user.isAdmin),
-    team: user.team ? { id: user.team.id, color: user.team.color } : null,
+    teams: user.teams.map((t) => ({ id: t.id, color: t.color, contestId: t.contestId })),
   };
 }

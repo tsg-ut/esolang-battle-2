@@ -50,7 +50,7 @@ export async function updateBoardFromSubmissions(boardId: number): Promise<void>
     include: {
       user: {
         include: {
-          team: true,
+          teams: true,
         },
       },
     },
@@ -82,7 +82,8 @@ export async function updateBoardFromSubmissions(boardId: number): Promise<void>
     if (typeof newScore === "number" && newScore < currentScore) {
       scoreOfLanguages[key] = newScore;
 
-      const rawColor = submission.user.team?.color?.toLowerCase() ?? "neutral";
+      const team = submission.user.teams.find((t: any) => t.contestId === contestId);
+      const rawColor = team?.color?.toLowerCase() ?? "neutral";
       const teamColor: OwnerColor =
         rawColor === "red" || rawColor === "blue" ? (rawColor as OwnerColor) : "neutral";
       colorOfLanguages[key] = teamColor;
@@ -133,7 +134,7 @@ export async function recomputeBoardFromSubmissions(boardId: number): Promise<vo
     include: {
       user: {
         include: {
-          team: true,
+          teams: true,
         },
       },
     },
@@ -170,7 +171,8 @@ export async function recomputeBoardFromSubmissions(boardId: number): Promise<vo
     if (typeof newScore === "number" && newScore < currentScore) {
       scoreOfLanguages[key] = newScore;
 
-      const rawColor = submission.user.team?.color?.toLowerCase() ?? "neutral";
+      const team = submission.user.teams.find((t: any) => t.contestId === contestId);
+      const rawColor = team?.color?.toLowerCase() ?? "neutral";
       const teamColor: OwnerColor =
         rawColor === "red" || rawColor === "blue" ? (rawColor as OwnerColor) : "neutral";
       colorOfLanguages[key] = teamColor;

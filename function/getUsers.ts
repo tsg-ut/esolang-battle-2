@@ -17,19 +17,19 @@ export type UserWithTeam = {
   id: number;
   name: string;
   isAdmin: boolean;
-  team: { id: number; color: string } | null;
+  teams: { id: number; color: string, contestId: number }[];
 };
 
 export async function getUsersWithTeams(): Promise<UserWithTeam[]> {
   const users = await prisma.user.findMany({
     orderBy: { id: "asc" },
-    include: { team: true },
+    include: { teams: true },
   });
 
   return users.map((u) => ({
     id: u.id,
     name: u.name,
     isAdmin: Boolean(u.isAdmin),
-    team: u.team ? { id: u.team.id, color: u.team.color } : null,
+    teams: u.teams.map((t) => ({ id: t.id, color: t.color, contestId: t.contestId })),
   }));
 }

@@ -4,7 +4,7 @@ type UserRow = {
   id: number;
   name: string;
   isAdmin: boolean;
-  team: { id: number; color: string } | null;
+  teams: { id: number; color: string; contestId: number }[];
 };
 
 type TeamRow = {
@@ -107,7 +107,7 @@ export function AdminUsersTab() {
       const updated = body as UserRow;
       setUsers((prev) =>
         prev
-          ? prev.map((u) => (u.id === updated.id ? { ...u, team: updated.team } : u))
+          ? prev.map((u) => (u.id === updated.id ? { ...u, teams: updated.teams } : u))
           : prev,
       );
     } catch (e) {
@@ -146,23 +146,33 @@ export function AdminUsersTab() {
                 <td>{u.name}</td>
                 <td>{u.isAdmin ? "admin" : "user"}</td>
                 <td>
-                  {teams && (
-                    <select
-                      value={u.team ? String(u.team.id) : ""}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        const nextTeamId = value === "" ? null : Number(value);
-                        void updateUserTeam(u.id, nextTeamId);
-                      }}
-                    >
-                      <option value="">未所属</option>
-                      {teams.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          #{t.id} ({t.color})
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {u.teams.map((ut) => (
+                      <div key={ut.id} style={{ fontSize: "0.85em", background: "#eee", padding: "2px 4px", borderRadius: 4 }}>
+                        C#{ut.contestId}: #{ut.id} ({ut.color})
+                      </div>
+                    ))}
+                    {teams && (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "") return;
+                          const nextTeamId = val === "CLEAR_ALL" ? null : Number(val);
+                          void updateUserTeam(u.id, nextTeamId);
+                        }}
+                        style={{ marginTop: 4 }}
+                      >
+                        <option value="">チームを追加/変更...</option>
+                        {teams.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            C#{t.contestId}: #{t.id} ({t.color})
+                          </option>
+                        ))}
+                        <option value="CLEAR_ALL">所属を全て解除</option>
+                      </select>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

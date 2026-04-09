@@ -123,7 +123,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(
         res,
         200,
-        { id: user.id, name: user.name, isAdmin: user.isAdmin, team: user.team },
+        { id: user.id, name: user.name, isAdmin: user.isAdmin, teams: user.teams },
         { "Set-Cookie": cookie },
       );
     }
@@ -159,7 +159,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(
           res,
           201,
-          { id: user.id, name: user.name, isAdmin: user.isAdmin, team: user.team },
+          { id: user.id, name: user.name, isAdmin: user.isAdmin, teams: user.teams },
           { "Set-Cookie": cookie },
         );
       } catch (e) {
@@ -276,24 +276,43 @@ const server = http.createServer(async (req, res) => {
       const prismaLocal = new PrismaClient({ adapter: adapterLocal });
 
       try {
+        const userWithTeamsBefore = await prismaLocal.user.findUnique({
+          where: { id: userId },
+          include: { teams: true }
+        });
+
+        let data: any = {};
         if (nextTeamId !== null) {
           const team = await prismaLocal.team.findUnique({ where: { id: nextTeamId } });
           if (!team) {
             return sendJson(res, 400, { error: "指定されたチームが存在しません" });
           }
+          const otherTeamsInSameContest = userWithTeamsBefore?.teams.filter(t => t.contestId === team.contestId) ?? [];
+          data = {
+            teams: {
+              disconnect: otherTeamsInSameContest.map(t => ({ id: t.id })),
+              connect: { id: nextTeamId }
+            }
+          };
+        } else {
+          data = {
+            teams: {
+              set: []
+            }
+          };
         }
 
         const updated = await prismaLocal.user.update({
           where: { id: userId },
-          data: { teamId: nextTeamId },
-          include: { team: true },
+          data,
+          include: { teams: true },
         });
 
         return sendJson(res, 200, {
           id: updated.id,
           name: updated.name,
           isAdmin: Boolean(updated.isAdmin),
-          team: updated.team ? { id: updated.team.id, color: updated.team.color } : null,
+          teams: updated.teams.map((t) => ({ id: t.id, color: t.color, contestId: t.contestId })),
         });
       } finally {
         await prismaLocal.$disconnect();
@@ -564,12 +583,15 @@ const server = http.createServer(async (req, res) => {
       // 0. 盤面ルールに基づく提出可否チェック（暫定実装）
       try {
         const user = await getUserInfo(currentUserId);
-        if (!user || !user.team) {
+        const boardId = 1;
+        // boardId=1 の contestId を取得すべきだが、暫定なので
+        // とりあえず最初に見つかったチーム、もしくは contestId=1 のチームを使う
+        const team = user?.teams.find(t => t.contestId === 1) || user?.teams[0];
+        if (!user || !team) {
           return sendJson(res, 400, { error: "チーム未所属のため提出できません" });
         }
 
-        const teamId = user.team.id;
-        const boardId = 1;
+        const teamId = team.id;
         const submittableLanguageIds = await getSubmittableLanguageIdsForTeam(boardId, teamId);
         if (!submittableLanguageIds.includes(languageId)) {
           return sendJson(res, 400, { error: "提出できません" });
@@ -656,13 +678,9 @@ const server = http.createServer(async (req, res) => {
 
         // 0. 盤面ルールに基づく提出可否チェック
           const user = await getUserInfo(currentUserId);
-          if (!user || !user.team) {
-            return sendJson(res, 400, { error: "チーム未所属のため提出できません" });
-          }
-
-          const team = await prismaLocal.team.findUnique({ where: { id: user.team.id } });
-          if (!team || team.contestId !== contestId) {
-            return sendJson(res, 400, { error: "このコンテストのチームではありません" });
+          const team = user?.teams.find(t => t.contestId === contestId);
+          if (!user || !team) {
+            return sendJson(res, 400, { error: "このコンテストのチームに所属していないため提出できません" });
           }
 
           const board = await prismaLocal.board.findUnique({ where: { contestId } });
@@ -670,7 +688,7 @@ const server = http.createServer(async (req, res) => {
             return sendJson(res, 400, { error: "Board for this contest not found" });
           }
 
-          const submittableLanguageIds = await getSubmittableLanguageIdsForTeam(board.id, user.team.id);
+          const submittableLanguageIds = await getSubmittableLanguageIdsForTeam(board.id, team.id);
           if (!submittableLanguageIds.includes(languageId)) {
             return sendJson(res, 400, { error: "提出できません" });
           }
@@ -785,10 +803,11 @@ const server = http.createServer(async (req, res) => {
       if (scope === "self") {
         filter.userId = currentUserId;
       } else if (scope === "team") {
-        if (!user.team) {
+        const team = user.teams[0];
+        if (!team) {
           return sendJson(res, 400, { error: "チーム未所属のためチーム提出は参照できません" });
         }
-        filter.teamId = user.team.id;
+        filter.teamId = team.id;
       } else if (scope === "all") {
         if (!user.isAdmin) {
           return sendJson(res, 403, { error: "管理者のみ全ての提出を参照できます" });
@@ -854,32 +873,11 @@ const server = http.createServer(async (req, res) => {
       if (scope === "self") {
         filter.userId = currentUserId;
       } else if (scope === "team") {
-        if (!user.team) {
-          return sendJson(res, 400, { error: "チーム未所属のためチーム提出は参照できません" });
+        const team = user.teams.find(t => t.contestId === contestId);
+        if (!team) {
+          return sendJson(res, 400, { error: "このコンテストのチームに所属していないためチーム提出は参照できません" });
         }
-
-        const { PrismaClient } = await import("./generated/prisma/client.js");
-        const { PrismaPg } = await import("@prisma/adapter-pg");
-        const { Pool } = await import("pg");
-        const databaseUrlLocal = process.env.DATABASE_URL;
-        if (!databaseUrlLocal) {
-          throw new Error("DATABASE_URL environment variable is not set");
-        }
-        const poolLocal = new Pool({ connectionString: databaseUrlLocal });
-        const adapterLocal = new PrismaPg(poolLocal);
-        const prismaLocal = new PrismaClient({ adapter: adapterLocal });
-
-        try {
-          const team = await prismaLocal.team.findUnique({ where: { id: user.team.id } });
-          if (!team || team.contestId !== contestId) {
-            return sendJson(res, 400, { error: "このコンテストのチームではありません" });
-          }
-        } finally {
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          prismaLocal.$disconnect();
-        }
-
-        filter.teamId = user.team.id;
+        filter.teamId = team.id;
       } else if (scope === "all") {
         if (!user.isAdmin) {
           return sendJson(res, 403, { error: "管理者のみ全ての提出を参照できます" });
@@ -1136,7 +1134,8 @@ const server = http.createServer(async (req, res) => {
         }
 
         const user = await getUserInfo(currentUserId);
-        if (!user || !user.team) {
+        const team = user?.teams[0];
+        if (!user || !team) {
           return sendJson(res, 400, { error: "チーム未所属のため提出可能言語を計算できません" });
         }
 
@@ -1153,18 +1152,12 @@ const server = http.createServer(async (req, res) => {
         const prismaLocal = new PrismaClient({ adapter: adapterLocal });
 
         try {
-          const team = await prismaLocal.team.findUnique({ where: { id: user.team.id } });
-          if (!team) {
-            return sendJson(res, 400, { error: "所属チームが存在しません" });
-          }
-
           const boardForContest = await prismaLocal.board.findUnique({ where: { contestId: team.contestId } });
           if (!boardForContest) {
             return sendJson(res, 404, { error: "Board not found for contest" });
           }
 
-          const teamId = user.team.id;
-          const languageIds = await getSubmittableLanguageIdsForTeam(boardForContest.id, teamId);
+          const languageIds = await getSubmittableLanguageIdsForTeam(boardForContest.id, team.id);
           return sendJson(res, 200, { languageIds });
         } finally {
           await prismaLocal.$disconnect();

@@ -4,7 +4,7 @@ type UserInfo = {
   id: number;
   name: string;
   isAdmin: boolean;
-  team: { id: number; color: string } | null;
+  teams: { id: number; color: string, contestId: number }[];
 };
 
 export function UserTab() {
@@ -100,12 +100,17 @@ export function UserTab() {
           </p>
           <p>ロール: {user.isAdmin ? "管理者" : "一般ユーザ"}</p>
           <p>
-            チーム: {user.team ? (
-              <span>
-                #{user.team.id} ({user.team.color})
-              </span>
+            所属チーム:
+            {user.teams.length > 0 ? (
+              <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
+                {user.teams.map((t) => (
+                  <li key={t.id}>
+                    コンテスト #{t.contestId}: #{t.id} ({t.color})
+                  </li>
+                ))}
+              </ul>
             ) : (
-              <span>未所属</span>
+              <span> 未所属</span>
             )}
           </p>
           <button type="button" onClick={handleLogout}>

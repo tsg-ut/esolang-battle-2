@@ -27,14 +27,15 @@ export async function getSubmissions(filter: GetSubmissionsFilter = {}) {
   if (typeof filter.userId === "number") {
     where.userId = filter.userId;
   }
-  if (typeof filter.teamId === "number") {
-    where.user = { ...(where.user ?? {}), teamId: filter.teamId };
-  }
   if (typeof filter.problemId === "number") {
     where.problemId = filter.problemId;
   }
   if (typeof filter.languageId === "number") {
     where.languageId = filter.languageId;
+  }
+
+  if (typeof filter.teamId === "number") {
+    where.user = { ...(where.user ?? {}), teams: { some: { id: filter.teamId } } };
   }
 
   if (typeof filter.contestId === "number") {
@@ -47,7 +48,7 @@ export async function getSubmissions(filter: GetSubmissionsFilter = {}) {
     include: {
       user: {
         include: {
-          team: true,
+          teams: true,
         },
       },
       problem: true,

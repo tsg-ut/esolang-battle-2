@@ -19,8 +19,7 @@ model User {
   password String
   isAdmin  Boolean  @default(false)
 
-  teamId Int?
-  team   Team?    @relation(fields: [teamId], references: [id])
+  teams Team[]
 
   submissions Submission[]
   testedProblems Problem[] @relation("ProblemTesters")

@@ -11,7 +11,7 @@ type MeInfo = {
   id: number;
   name: string;
   isAdmin: boolean;
-  team: { id: number; color: string } | null;
+  teams: { id: number; color: string; contestId: number }[];
 };
 
 type ContestTabId = "board" | "problem" | "submit" | "submissions" | "codeTest";
