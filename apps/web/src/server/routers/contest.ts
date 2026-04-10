@@ -1,11 +1,18 @@
 import { contestIdSchema } from '@esolang-battle/common';
+import { findAllContests } from '@esolang-battle/db';
 import { router, publicProcedure } from '../trpc';
-import { getContests } from '../function/getContests';
 import { getBoard } from '../function/getBoard';
 
 export const contestRouter = router({
   getContests: publicProcedure.query(async ({ ctx }) => {
-    return await getContests(ctx.prisma);
+    const contests = await findAllContests(ctx.prisma);
+    return contests.map((c) => ({
+      id: c.id,
+      name: c.name,
+      viewerType: c.viewerType,
+      startAt: c.startAt.toISOString(),
+      endAt: c.endAt.toISOString(),
+    }));
   }),
   getBoard: publicProcedure
     .input(contestIdSchema)

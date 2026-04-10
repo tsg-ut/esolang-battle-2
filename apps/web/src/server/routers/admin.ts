@@ -3,58 +3,52 @@ import {
   upsertProblemSchema,
   updateUserTeamSchema
 } from '@esolang-battle/common';
+import { 
+  findAllUsersWithTeams, 
+  findAllTeams, 
+  findAllProblems, 
+  upsertProblem,
+  updateUserTeam,
+  findUserByIdWithTeams
+} from '@esolang-battle/db';
 import { router, adminProcedure } from '../trpc';
-import { getUsersWithTeams } from '../function/getUsers';
-import { getTeams } from '../function/getTeams';
-import { listProblems } from '../function/listProblems';
 
 export const adminRouter = router({
   getUsers: adminProcedure.query(async ({ ctx }) => {
-    return await getUsersWithTeams(ctx.prisma);
+    const users = await findAllUsersWithTeams(ctx.prisma);
+    return users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      isAdmin: Boolean(u.isAdmin),
+      teams: u.teams.map((t) => ({ id: t.id, color: t.color, contestId: t.contestId })),
+    }));
   }),
   getTeams: adminProcedure.query(async ({ ctx }) => {
-    return await getTeams(ctx.prisma);
+    return await findAllTeams(ctx.prisma);
   }),
   getProblems: adminProcedure
     .input(listProblemsSchema.optional())
     .query(async ({ ctx, input }) => {
-      return await listProblems(ctx.prisma, input?.contestId);
+      const problems = await findAllProblems(ctx.prisma, input?.contestId);
+      return problems.map((p) => ({
+        id: p.id,
+        contestId: p.contestId,
+        title: p.title,
+        problemStatement: p.problemStatement,
+      }));
     }),
   upsertProblem: adminProcedure
     .input(upsertProblemSchema)
     .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input;
-      if (id) {
-        return await ctx.prisma.problem.update({
-          where: { id },
-          data,
-        });
-      } else {
-        return await ctx.prisma.problem.create({
-          data,
-        });
-      }
+      return await upsertProblem(ctx.prisma, input);
     }),
   updateUserTeam: adminProcedure
     .input(updateUserTeamSchema)
     .mutation(async ({ ctx, input }) => {
       const { userId, teamId } = input;
-      const user = await ctx.prisma.user.findUnique({
-        where: { id: userId },
-        include: { teams: true },
-      });
+      const user = await findUserByIdWithTeams(ctx.prisma, userId);
       if (!user) throw new Error("User not found");
 
-      return await ctx.prisma.user.update({
-        where: { id: userId },
-        data: {
-          teams: {
-            set: teamId ? [{ id: teamId }] : [],
-          },
-        },
-        include: {
-          teams: true,
-        },
-      });
+      return await updateUserTeam(ctx.prisma, userId, teamId);
     }),
 });

@@ -1,17 +1,34 @@
 import { problemIdSchema, listProblemsSchema } from '@esolang-battle/common';
+import { findProblemById, findAllProblems } from '@esolang-battle/db';
 import { router, publicProcedure } from '../trpc';
-import { getProblem } from '../function/getProblem';
-import { listProblems } from '../function/listProblems';
 
 export const problemRouter = router({
   getProblem: publicProcedure
     .input(problemIdSchema)
     .query(async ({ ctx, input }) => {
-      return await getProblem(ctx.prisma, input.problemId);
+      const problem = await findProblemById(ctx.prisma, input.problemId);
+      if (!problem) return null;
+      return {
+        id: problem.id,
+        title: problem.title,
+        problemStatement: problem.problemStatement,
+        contestId: problem.contestId,
+        acceptedLanguages: problem.acceptedLanguages.map((lang) => ({
+          id: lang.id,
+          description: lang.description,
+          dockerImageId: lang.dockerImageId,
+        })),
+      };
     }),
   listProblems: publicProcedure
     .input(listProblemsSchema)
     .query(async ({ ctx, input }) => {
-      return await listProblems(ctx.prisma, input.contestId);
+      const problems = await findAllProblems(ctx.prisma, input.contestId);
+      return problems.map((p) => ({
+        id: p.id,
+        contestId: p.contestId,
+        title: p.title,
+        problemStatement: p.problemStatement,
+      }));
     }),
 });

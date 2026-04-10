@@ -13,3 +13,17 @@ export async function findUserByIdWithTeams(prisma: PrismaClient, id: number) {
     include: { teams: true },
   });
 }
+
+export async function updateUserTeam(prisma: PrismaClient, userId: number, teamId: number | null) {
+  return await prisma.user.update({
+    where: { id: userId },
+    data: {
+      teams: {
+        set: teamId ? [{ id: teamId }] : [],
+      },
+    },
+    include: {
+      teams: true,
+    },
+  });
+}
