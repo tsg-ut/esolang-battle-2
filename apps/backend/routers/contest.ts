@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { contestIdSchema } from '@esolang-battle/common';
 import { router, publicProcedure } from '../trpc.js';
 import { getContests } from '../function/getContests.js';
 import { getBoard } from '../function/getBoard.js';
@@ -8,7 +8,7 @@ export const contestRouter = router({
     return await getContests(ctx.prisma);
   }),
   getBoard: publicProcedure
-    .input(z.object({ contestId: z.number() }))
+    .input(contestIdSchema)
     .query(async ({ ctx, input }) => {
       return await getBoard(ctx.prisma, input.contestId);
     }),

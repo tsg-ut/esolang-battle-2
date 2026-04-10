@@ -1,4 +1,8 @@
-import { z } from 'zod';
+import {
+  listProblemsSchema,
+  upsertProblemSchema,
+  updateUserTeamSchema
+} from '@esolang-battle/common';
 import { router, adminProcedure } from '../trpc.js';
 import { getUsersWithTeams } from '../function/getUsers.js';
 import { getTeams } from '../function/getTeams.js';
@@ -12,17 +16,12 @@ export const adminRouter = router({
     return await getTeams(ctx.prisma);
   }),
   getProblems: adminProcedure
-    .input(z.object({ contestId: z.number().optional() }).optional())
+    .input(listProblemsSchema.optional())
     .query(async ({ ctx, input }) => {
       return await listProblems(ctx.prisma, input?.contestId);
     }),
   upsertProblem: adminProcedure
-    .input(z.object({
-      id: z.number().nullable(),
-      contestId: z.number(),
-      title: z.string(),
-      problemStatement: z.string(),
-    }))
+    .input(upsertProblemSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       if (id) {
@@ -37,10 +36,7 @@ export const adminRouter = router({
       }
     }),
   updateUserTeam: adminProcedure
-    .input(z.object({
-      userId: z.number(),
-      teamId: z.number().nullable(),
-    }))
+    .input(updateUserTeamSchema)
     .mutation(async ({ ctx, input }) => {
       const { userId, teamId } = input;
       const user = await ctx.prisma.user.findUnique({
