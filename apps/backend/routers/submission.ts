@@ -2,10 +2,12 @@ import {
   submissionFilterSchema,
   testCodeSchema,
   submittableLanguageSchema,
-  submitCodeSchema
+  submitCodeSchema,
+  submissionIdSchema
 } from '@esolang-battle/common';
 import { router, publicProcedure, protectedProcedure } from '../trpc.js';
 import { getSubmissions } from '../function/getSubmissions.js';
+import { getSubmissionDetail } from '../function/getSubmissionDetail.js';
 import { getLanguages } from '../function/getLanguages.js';
 import { getSubmittableLanguageIdsForTeam } from '../function/getSubmittableLanguages.js';
 import { submitCode } from '../function/submitCode.js';
@@ -20,6 +22,11 @@ export const submissionRouter = router({
   getLanguages: publicProcedure.query(async ({ ctx }) => {
     return await getLanguages(ctx.prisma);
   }),
+  getSubmissionDetail: protectedProcedure
+    .input(submissionIdSchema)
+    .query(async ({ ctx, input }) => {
+      return await getSubmissionDetail(ctx.prisma, input.submissionId, ctx.user.id, ctx.user.isAdmin);
+    }),
   testCode: publicProcedure
     .input(testCodeSchema)
     .mutation(async ({ input }) => {

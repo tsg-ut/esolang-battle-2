@@ -1,19 +1,7 @@
-import "dotenv/config";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@esolang-battle/db";
 
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL environment variable is not set");
-}
-
-const pool = new Pool({ connectionString: databaseUrl });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
 export async function getSubmissionDetail(
+  prisma: PrismaClient,
   submissionId: number,
   userId: number,
   isAdmin: boolean,
@@ -38,6 +26,7 @@ export async function getSubmissionDetail(
     return null;
   }
 
+  // 本人または管理者のみ詳細（コード等）を閲覧可能
   if (!isAdmin && submission.userId !== userId) {
     return null;
   }

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { trpc } from '@/utils/trpc';
 
 type Scope = "self" | "team" | "all";
@@ -89,12 +90,17 @@ export default function SubmissionsPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">長</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">スコア</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">提出時刻</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">詳細</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {submissions.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">{s.id}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono">
+                    <Link href={`/contest/${contestId}/submissions/${s.id}`} className="text-blue-600 hover:underline">
+                      {s.id}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{s.user.name}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-bold text-white bg-${s.user.teams.find(t => t.contestId === contestId)?.color === 'red' ? 'red-600' : s.user.teams.find(t => t.contestId === contestId)?.color === 'blue' ? 'blue-700' : 'gray-500'}`}>
@@ -112,6 +118,11 @@ export default function SubmissionsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{new Date(s.submittedAt).toLocaleString()}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-mono">
+                    <Link href={`/contest/${contestId}/submissions/${s.id}`} className="text-blue-600 hover:underline">
+                      {s.id}
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
