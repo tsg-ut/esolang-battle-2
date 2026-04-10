@@ -1,6 +1,6 @@
 import type { UserInfo } from "@esolang-battle/common";
 import bcrypt from "bcryptjs";
-import type { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient } from "../prisma/generated/client/index";
 
 export async function verifyUserLogin(prisma: PrismaClient, name: string, password: string): Promise<UserInfo | null> {
   const user = await prisma.user.findFirst({
@@ -10,7 +10,6 @@ export async function verifyUserLogin(prisma: PrismaClient, name: string, passwo
 
   if (!user) return null;
 
-  // password は bcrypt ハッシュで保存されている前提
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return null;
 

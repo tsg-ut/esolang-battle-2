@@ -1,11 +1,11 @@
-import { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient } from "@esolang-battle/db";
 
 export type GetSubmissionsFilter = {
-  userId?: number;
-  teamId?: number;
-  problemId?: number;
-  languageId?: number;
-  contestId?: number;
+  userId?: number | undefined;
+  teamId?: number | undefined;
+  problemId?: number | undefined;
+  languageId?: number | undefined;
+  contestId?: number | undefined;
 };
 
 export async function getSubmissions(prisma: PrismaClient, filter: GetSubmissionsFilter = {}) {

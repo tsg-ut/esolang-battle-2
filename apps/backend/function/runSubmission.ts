@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient } from "@esolang-battle/db";
 import { runAllTestCasesInSingleContainer } from "./runCode.js";
 
 const databaseUrl = process.env.DATABASE_URL;

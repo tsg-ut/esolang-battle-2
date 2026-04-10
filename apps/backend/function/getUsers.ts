@@ -1,4 +1,4 @@
-import { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient } from "@esolang-battle/db";
 import type { UserInfo } from "@esolang-battle/common";
 
 export async function getUsersWithTeams(prisma: PrismaClient): Promise<UserInfo[]> {

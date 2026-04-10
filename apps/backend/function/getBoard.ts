@@ -1,4 +1,4 @@
-import { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient } from "@esolang-battle/db";
 
 export type OwnerColor = "red" | "blue" | "neutral";
 

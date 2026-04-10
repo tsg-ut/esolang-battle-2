@@ -1,4 +1,4 @@
-import { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient } from "@esolang-battle/db";
 
 export async function getProblem(prisma: PrismaClient, problemId: number) {
   const problem = await prisma.problem.findUnique({

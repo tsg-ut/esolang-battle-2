@@ -1,5 +1,5 @@
 import type { OwnerColor } from "./getBoard.js";
-import type { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient } from "@esolang-battle/db";
 
 /**
  * Board.lastProcessedSubmissionId より新しい Submission を反映して

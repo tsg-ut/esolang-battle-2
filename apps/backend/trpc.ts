@@ -1,21 +1,45 @@
+import "dotenv/config";
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
 import type { UserInfo } from '@esolang-battle/common';
-import { PrismaClient } from './generated/prisma/client.js';
-import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { prisma } from '@esolang-battle/db';
 
-// DB Connection
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL environment variable is not set");
-}
-const pool = new Pool({ connectionString: databaseUrl });
-const adapter = new PrismaPg(pool);
-export const prisma = new PrismaClient({ adapter });
+import { decode } from "next-auth/jwt";
 
-export const createContext = ({ req, res }: CreateFastifyContextOptions) => {
-  const user = (req as any).user as UserInfo | undefined;
+export { prisma };
+
+export const createContext = async ({ req, res }: CreateFastifyContextOptions) => {
+  let user = (req as any).user as UserInfo | undefined;
+
+  // NextAuth のクッキーからユーザーを取得
+  if (!user) {
+    const cookies = (req.headers.cookie || "").split(';').reduce((acc, c) => {
+      const [k, v] = c.trim().split('=');
+      if (k && v) acc[k] = v;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const token = cookies['next-auth.session-token'] || cookies['__Secure-next-auth.session-token'];
+    if (token) {
+      try {
+        const decoded = await decode({
+          token,
+          secret: process.env.NEXTAUTH_SECRET || "",
+        });
+        if (decoded) {
+          user = {
+            id: Number(decoded.id),
+            name: decoded.name || "",
+            isAdmin: Boolean(decoded.isAdmin),
+            teams: (decoded.teams as any[]) || [],
+          };
+        }
+      } catch (err) {
+        console.error("NextAuth token decode error:", err);
+      }
+    }
+  }
+
   return {
     req,
     res,
