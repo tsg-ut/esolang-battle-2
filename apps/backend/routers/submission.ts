@@ -7,10 +7,9 @@ import {
 import { router, publicProcedure, protectedProcedure } from '../trpc.js';
 import { getSubmissions } from '../function/getSubmissions.js';
 import { getLanguages } from '../function/getLanguages.js';
-import { testCode } from '../function/testCode.js';
 import { getSubmittableLanguageIdsForTeam } from '../function/getSubmittableLanguages.js';
 import { submitCode } from '../function/submitCode.js';
-import { submissionQueue } from '../queue.js';
+import { submissionQueue, testQueue, testQueueEvents } from '../queue.js';
 
 export const submissionRouter = router({
   getSubmissions: publicProcedure
@@ -23,8 +22,9 @@ export const submissionRouter = router({
   }),
   testCode: publicProcedure
     .input(testCodeSchema)
-    .mutation(async ({ ctx, input }) => {
-      return await testCode(ctx.prisma, input);
+    .mutation(async ({ input }) => {
+      const job = await testQueue.add('runTest', input);
+      return await job.waitUntilFinished(testQueueEvents);
     }),
   getSubmittableLanguageIdsForTeam: protectedProcedure
     .input(submittableLanguageSchema)

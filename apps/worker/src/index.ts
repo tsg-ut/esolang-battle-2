@@ -12,6 +12,11 @@ type SubmissionJobData = {
   submissionId: number;
 };
 
+type TestJobData = {
+  code: string;
+  languageId: number;
+};
+
 type DockerResult = {
   stdout: string;
   stderr: string;
@@ -30,7 +35,46 @@ const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 const connection = new Redis(redisUrl, { maxRetriesPerRequest: null });
 const docker = new Docker();
 
-// --- Logic (Ported from apps/backend) ---
+// --- Logic ---
+
+async function runCode(image: string, code: string): Promise<DockerResult> {
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "esolang-test-"));
+  const cmd = image.split("/").slice(-1)[0];
+
+  try {
+    const codeFileName = "code.bf";
+    const codePath = path.join(tmpDir, codeFileName);
+    await fs.writeFile(codePath, code, "utf8");
+
+    const container = await docker.createContainer({
+      Image: image,
+      Cmd: [cmd!, `/volume/${codeFileName}`],
+      HostConfig: {
+        Binds: [`${tmpDir}:/volume:ro`],
+      },
+    });
+
+    const start = Date.now();
+    await container.start();
+    const waitResult = await container.wait();
+    const end = Date.now();
+
+    const logBuffer = await container.logs({ stdout: true, stderr: true });
+    // Docker ログ形式 (8バイトヘッダ) を考慮した簡易的な文字列化
+    const output = logBuffer.toString('utf8').replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+
+    await container.remove({ force: true });
+
+    return {
+      stdout: output,
+      stderr: "",
+      exitCode: waitResult.StatusCode ?? -1,
+      durationMs: end - start,
+    };
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+}
 
 async function runAllTestCasesInSingleContainer(
   image: string,
@@ -41,7 +85,7 @@ async function runAllTestCasesInSingleContainer(
   const cmd = image.split("/").slice(-1)[0];
 
   try {
-    const codeFileName = "code.bf"; // 仮のファイル名
+    const codeFileName = "code.bf";
     const codePath = path.join(tmpDir, codeFileName);
     await fs.writeFile(codePath, code, "utf8");
 
@@ -154,22 +198,49 @@ async function processSubmission(submissionId: number) {
       where: { id: submission.id },
       data: { score: submission.codeLength },
     });
-    // TODO: updateBoardFromSubmissions(boardId) を呼び出す
+  } else {
+    await prisma.submission.update({
+      where: { id: submission.id },
+      data: { score: 0 },
+    });
   }
 }
 
-// --- Worker ---
-const worker = new Worker<SubmissionJobData>('submission', async (job: Job<SubmissionJobData>) => {
-  console.log(`Processing job ${job.id} for submission ${job.data.submissionId}`);
+async function processTest(data: TestJobData) {
+  const language = await prisma.language.findUnique({ where: { id: data.languageId } });
+  if (!language) throw new Error("Language not found");
+
+  return await runCode(language.dockerImageId, data.code);
+}
+
+// --- Workers ---
+
+const submissionWorker = new Worker<SubmissionJobData>('submission', async (job: Job<SubmissionJobData>) => {
+  console.log(`Processing submission ${job.data.submissionId}`);
   await processSubmission(job.data.submissionId);
 }, { connection });
 
-worker.on('completed', (job) => {
-  console.log(`Job ${job.id} completed!`);
+const testWorker = new Worker<TestJobData>('test', async (job: Job<TestJobData>) => {
+  console.log(`Processing test code for language ${job.data.languageId}`);
+  if (job.name === 'runTest') {
+    return await processTest(job.data);
+  }
+}, { connection });
+
+submissionWorker.on('completed', (job) => {
+  console.log(`Submission job ${job.id} completed!`);
 });
 
-worker.on('failed', (job, err) => {
-  console.error(`Job ${job?.id} failed with ${err.message}`);
+testWorker.on('completed', (job) => {
+  console.log(`Test job ${job.id} completed!`);
 });
 
-console.log('Worker started...');
+submissionWorker.on('failed', (job, err) => {
+  console.error(`Submission job ${job?.id} failed with ${err.message}`);
+});
+
+testWorker.on('failed', (job, err) => {
+  console.error(`Test job ${job?.id} failed with ${err.message}`);
+});
+
+console.log('Worker started (submission & test)...');

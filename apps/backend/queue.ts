@@ -1,25 +1,30 @@
-import { Queue } from 'bullmq';
-import { Redis } from 'ioredis';
+import { Queue, QueueEvents } from 'bullmq';
+import Redis from 'ioredis';
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-
-export const connection = new Redis(redisUrl, {
+const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
 });
 
-export const submissionQueue = new Queue('submission', {
-  connection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 1000,
-    },
-    removeOnComplete: true,
-    removeOnFail: false,
+const defaultJobOptions = {
+  attempts: 3,
+  backoff: {
+    type: 'exponential',
+    delay: 1000,
   },
+  removeOnComplete: true,
+  removeOnFail: {
+    count: 500,
+  },
+};
+
+export const submissionQueue = new Queue('submission', { 
+  connection,
+  defaultJobOptions,
 });
 
-export type SubmissionJobData = {
-  submissionId: number;
-};
+export const testQueue = new Queue('test', { 
+  connection,
+  defaultJobOptions,
+});
+
+export const testQueueEvents = new QueueEvents('test', { connection });
