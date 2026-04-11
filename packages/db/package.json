@@ -14,7 +14,9 @@
   },
   "scripts": {
     "build": "npx -y prisma@7 generate && tsc",
-    "generate": "npx -y prisma@7 generate"
+    "generate": "npx -y prisma@7 generate",
+    "migrate": "npx -y prisma@7 migrate dev",
+    "studio": "npx -y prisma@7 studio"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.0.0",
