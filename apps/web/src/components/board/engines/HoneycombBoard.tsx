@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+
 import { useRouter } from 'next/navigation';
+
 import { BoardState, HoneycombBoardConfig } from '@esolang-battle/common';
 
 type HoneycombBoardProps = {
@@ -14,7 +16,7 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({ config, state, c
   const router = useRouter();
   const { cellIds, cellInfo, size = 50 } = config;
 
-  const hexPath = "M 30 0 L 60 17.32 L 60 51.96 L 30 69.28 L 0 51.96 L 0 17.32 Z";
+  const hexPath = 'M 30 0 L 60 17.32 L 60 51.96 L 30 69.28 L 0 51.96 L 0 17.32 Z';
 
   const getTeamColor = (ownerTeamId: number | null) => {
     if (ownerTeamId === null) return '#1a1a1a';
@@ -22,10 +24,10 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({ config, state, c
   };
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center bg-gray-900 rounded-lg overflow-hidden">
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-lg bg-gray-900">
       <svg
         viewBox="-400 -400 800 800"
-        className="w-full h-full max-w-2xl max-h-[80vh]"
+        className="h-full max-h-[80vh] w-full max-w-2xl"
         style={{ filter: 'drop-shadow(0 0 10px rgba(0,0,0,0.5))' }}
       >
         {cellIds.map((cellId) => {
@@ -35,15 +37,18 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({ config, state, c
           const cell = state[cellId];
 
           // Axial to pixel coords
-          const x = size * (3/2 * q);
-          const y = size * ((Math.sqrt(3)/2) * q + Math.sqrt(3) * r);
+          const x = size * ((3 / 2) * q);
+          const y = size * ((Math.sqrt(3) / 2) * q + Math.sqrt(3) * r);
 
           return (
             <g
               key={cellId}
               transform={`translate(${x - 30}, ${y - 35})`}
               className="cursor-pointer transition-transform hover:scale-105"
-              onClick={() => languageId !== undefined && router.push(`/contest/${contestId}/submit?languageId=${languageId}`)}
+              onClick={() =>
+                languageId !== undefined &&
+                router.push(`/contest/${contestId}/submit?languageId=${languageId}`)
+              }
             >
               <path
                 d={hexPath}
@@ -55,7 +60,7 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({ config, state, c
                 x="30"
                 y="30"
                 textAnchor="middle"
-                className="fill-white font-bold text-[12px] pointer-events-none"
+                className="pointer-events-none fill-white text-[12px] font-bold"
               >
                 {label}
               </text>
@@ -64,7 +69,7 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({ config, state, c
                   x="30"
                   y="45"
                   textAnchor="middle"
-                  className="fill-white/80 font-semibold text-[10px] pointer-events-none"
+                  className="pointer-events-none fill-white/80 text-[10px] font-semibold"
                 >
                   {cell.score}
                 </text>

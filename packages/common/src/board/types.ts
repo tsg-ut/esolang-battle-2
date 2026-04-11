@@ -83,11 +83,7 @@ export type BoardSubmission = {
 
 // --- Engine Interface ---
 export interface IBoardEngine<TConfig extends BoardConfig = BoardConfig> {
-  calculateUpdate(
-    config: TConfig,
-    state: BoardState,
-    submission: BoardSubmission
-  ): BoardState;
+  calculateUpdate(config: TConfig, state: BoardState, submission: BoardSubmission): BoardState;
 
   // 初期状態を生成する（コンテスト作成時用）
   createInitialState(config: TConfig): BoardState;

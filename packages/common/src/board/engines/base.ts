@@ -1,16 +1,12 @@
-import { BoardState, BoardConfig, BoardSubmission, IBoardEngine } from '../types';
+import { BoardConfig, BoardState, BoardSubmission, IBoardEngine } from '../types';
 
-export abstract class BaseBoardEngine<TConfig extends BoardConfig>
-  implements IBoardEngine<TConfig>
-{
+export abstract class BaseBoardEngine<
+  TConfig extends BoardConfig,
+> implements IBoardEngine<TConfig> {
   abstract getAdjacentCellIds(config: TConfig, cellId: string): string[];
   abstract getTargetCellId(config: TConfig, submission: BoardSubmission): string | null;
 
-  calculateUpdate(
-    config: TConfig,
-    state: BoardState,
-    submission: BoardSubmission
-  ): BoardState {
+  calculateUpdate(config: TConfig, state: BoardState, submission: BoardSubmission): BoardState {
     const targetCellId = this.getTargetCellId(config, submission);
     if (!targetCellId || !state[targetCellId]) return state;
 

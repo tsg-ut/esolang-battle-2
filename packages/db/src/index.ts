@@ -47,5 +47,6 @@ export * from './services/language';
 export * from './services/team';
 export * from './services/user';
 export * from './services/problem';
+export * from './services/testCase';
 export * from './services/submission';
 export * from './services/board/index';

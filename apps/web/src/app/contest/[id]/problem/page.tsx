@@ -2,68 +2,38 @@
 
 import React from 'react';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 import { trpc } from '@/utils/trpc';
 
-export default function ProblemPage() {
+export default function ProblemListPage() {
   const params = useParams();
+  const router = useRouter();
   const contestId = Number(params.id);
 
-  const {
-    data: problems,
-    isLoading: isLoadingList,
-    error: listError,
-  } = trpc.listProblems.useQuery({ contestId });
-  const firstProblemId = problems?.[0]?.id;
+  const { data: problems, isLoading, error } = trpc.listProblems.useQuery({ contestId });
 
-  const {
-    data: problem,
-    isLoading: isLoadingProblem,
-    error: problemError,
-  } = trpc.getProblem.useQuery({ problemId: firstProblemId ?? 0 }, { enabled: !!firstProblemId });
-
-  const { data: me } = trpc.me.useQuery();
-
-  if (isLoadingList || (firstProblemId && isLoadingProblem)) return <div>Loading problem...</div>;
-  if (listError) return <div className="text-red-600">Error: {listError.message}</div>;
-  if (problemError) return <div className="text-red-600">Error: {problemError.message}</div>;
+  if (isLoading) return <div>Loading problems...</div>;
+  if (error) return <div className="text-red-600">Error: {error.message}</div>;
   if (!problems || problems.length === 0) return <div>問題がありません。</div>;
-  if (!problem) return <div>問題の読み込みに失敗しました。</div>;
 
   return (
-    <div className="max-w-4xl">
-      <h2 className="mb-4 text-2xl font-bold text-gray-900">
-        {problem.title} <span className="text-lg font-normal text-gray-500">(ID {problem.id})</span>
-      </h2>
-
-      <div className="mb-8 rounded-lg border border-gray-200 bg-gray-50 p-6 shadow-sm">
-        <pre className="whitespace-pre-wrap font-sans leading-relaxed text-gray-800">
-          {problem.problemStatement}
-        </pre>
-      </div>
-
-      {problem.acceptedLanguages && problem.acceptedLanguages.length > 0 && (
-        <div className="mb-8">
-          <h3 className="mb-4 border-b pb-2 text-xl font-semibold text-gray-900">使用可能な言語</h3>
-          <ul className="list-disc space-y-2 pl-5 text-gray-700">
-            {problem.acceptedLanguages.map((lang) => (
-              <li key={lang.id}>
-                <span className="font-medium">ID {lang.id}</span>: {lang.description}
-              </li>
-            ))}
-          </ul>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {problems.map((problem) => (
+        <div
+          key={problem.id}
+          onClick={() => router.push(`/contest/${contestId}/problem/${problem.id}`)}
+          className="group cursor-pointer rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
+        >
+          <h3 className="mb-2 text-xl font-bold text-gray-900 group-hover:text-blue-600">
+            {problem.title}
+          </h3>
+          <p className="line-clamp-3 text-sm text-gray-600">{problem.problemStatement}</p>
+          <div className="mt-4 flex items-center text-sm font-semibold text-blue-500">
+            View Details →
+          </div>
         </div>
-      )}
-
-      {me && me.isAdmin && (
-        <div className="mt-12 rounded-lg border border-blue-200 bg-blue-50 p-6">
-          <h3 className="mb-2 text-lg font-bold text-blue-900">管理機能 (管理者用)</h3>
-          <p className="text-blue-800">
-            問題の編集やテストケースの管理は、今後専用の管理画面に統合されます。
-          </p>
-        </div>
-      )}
+      ))}
     </div>
   );
 }

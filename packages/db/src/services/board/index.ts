@@ -1,5 +1,6 @@
+import { BoardState, BoardSubmission, getBoardEngine } from '@esolang-battle/common';
+
 import { PrismaClient } from '../../../prisma/generated/client/index';
-import { BoardState, getBoardEngine, BoardSubmission } from '@esolang-battle/common';
 
 export async function findBoardByContestId(prisma: PrismaClient, contestId: number) {
   return await prisma.board.findUnique({
@@ -78,7 +79,11 @@ export async function recalculateBoard(prisma: PrismaClient, boardId: number) {
   });
 
   for (const submission of submissions) {
-    state = engine.calculateUpdate(board.config as any, state, submission as unknown as BoardSubmission);
+    state = engine.calculateUpdate(
+      board.config as any,
+      state,
+      submission as unknown as BoardSubmission
+    );
   }
 
   await prisma.board.update({
@@ -92,11 +97,7 @@ export async function recalculateBoard(prisma: PrismaClient, boardId: number) {
 }
 
 // 既存の関数との互換性のために残す
-export async function updateBoardData(
-  prisma: PrismaClient,
-  contestId: number,
-  data: any
-) {
+export async function updateBoardData(prisma: PrismaClient, contestId: number, data: any) {
   return await prisma.board.update({
     where: { contestId },
     data,

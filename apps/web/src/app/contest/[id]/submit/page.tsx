@@ -36,10 +36,15 @@ function SubmitForm() {
   }, [languages, searchParams, selectedLanguageId]);
 
   useEffect(() => {
-    if (problems && problems.length > 0 && !selectedProblemId) {
-      setSelectedProblemId(String(problems[0].id));
+    if (problems && problems.length > 0) {
+      const probIdParam = searchParams.get('problemId');
+      if (probIdParam) {
+        setSelectedProblemId(probIdParam);
+      } else if (!selectedProblemId) {
+        setSelectedProblemId(String(problems[0].id));
+      }
     }
-  }, [problems, selectedProblemId]);
+  }, [problems, searchParams, selectedProblemId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

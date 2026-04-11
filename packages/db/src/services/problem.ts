@@ -32,3 +32,9 @@ export async function upsertProblem(
     });
   }
 }
+
+export async function deleteProblem(prisma: PrismaClient, id: number) {
+  return await prisma.problem.delete({
+    where: { id },
+  });
+}

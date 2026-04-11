@@ -1,4 +1,4 @@
-import { BoardState, HoneycombBoardConfig, BoardSubmission } from '../types';
+import { BoardState, BoardSubmission, HoneycombBoardConfig } from '../types';
 import { BaseBoardEngine } from './base';
 
 export class HoneycombBoardEngine extends BaseBoardEngine<HoneycombBoardConfig> {
@@ -11,8 +11,12 @@ export class HoneycombBoardEngine extends BaseBoardEngine<HoneycombBoardConfig> 
     if (!info) return [];
     const { q, r } = info;
     const neighbors = [
-      [q + 1, r], [q + 1, r - 1], [q, r - 1],
-      [q - 1, r], [q - 1, r + 1], [q, r + 1]
+      [q + 1, r],
+      [q + 1, r - 1],
+      [q, r - 1],
+      [q - 1, r],
+      [q - 1, r + 1],
+      [q, r + 1],
     ];
     return neighbors.map(([nq, nr]) => `${nq}_${nr}`);
   }

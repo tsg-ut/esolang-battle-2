@@ -6,7 +6,7 @@ export type GetSubmissionsFilter = {
   problemId?: number;
   languageId?: number;
   contestId?: number;
-}
+};
 
 export async function findSubmissions(prisma: PrismaClient, filter: GetSubmissionsFilter = {}) {
   const where: any = {};

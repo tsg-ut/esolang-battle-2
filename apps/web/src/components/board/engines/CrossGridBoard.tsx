@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+
 import { useRouter } from 'next/navigation';
+
 import { BoardState, CrossGridBoardConfig } from '@esolang-battle/common';
 
 type CrossGridBoardProps = {
@@ -24,19 +26,24 @@ export const CrossGridBoard: React.FC<CrossGridBoardProps> = ({ config, state, c
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full overflow-auto bg-gray-900 p-8 rounded-lg shadow-2xl">
-      <div className="inline-block border-collapse bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
-        <div className="flex bg-gray-900 border-b border-gray-700">
-          <div className="w-32 h-16 flex items-center justify-center font-bold text-gray-400 border-r border-gray-700">Problem \ Language</div>
+    <div className="flex h-full w-full flex-col items-center justify-center overflow-auto rounded-lg bg-gray-900 p-8 shadow-2xl">
+      <div className="inline-block border-collapse overflow-hidden rounded-lg border border-gray-700 bg-gray-800">
+        <div className="flex border-b border-gray-700 bg-gray-900">
+          <div className="flex h-16 w-32 items-center justify-center border-r border-gray-700 font-bold text-gray-400">
+            Problem \ Language
+          </div>
           {languageIds.map((lId) => (
-            <div key={lId} className="w-24 h-16 flex items-center justify-center font-bold text-sm text-gray-300 border-r border-gray-700 last:border-r-0 break-words text-center px-2">
+            <div
+              key={lId}
+              className="flex h-16 w-24 items-center justify-center break-words border-r border-gray-700 px-2 text-center text-sm font-bold text-gray-300 last:border-r-0"
+            >
               {languageInfo[String(lId)]}
             </div>
           ))}
         </div>
         {problemIds.map((pId) => (
           <div key={pId} className="flex border-b border-gray-700 last:border-b-0">
-            <div className="w-32 h-16 flex items-center justify-center font-medium text-xs text-gray-400 border-r border-gray-700 px-2 break-words text-center">
+            <div className="flex h-16 w-32 items-center justify-center break-words border-r border-gray-700 px-2 text-center text-xs font-medium text-gray-400">
               {problemInfo[String(pId)]}
             </div>
             {languageIds.map((lId) => {
@@ -47,11 +54,11 @@ export const CrossGridBoard: React.FC<CrossGridBoardProps> = ({ config, state, c
                   key={lId}
                   role="button"
                   tabIndex={0}
-                  className={`w-24 h-16 flex flex-col items-center justify-center transition-all hover:bg-opacity-80 cursor-pointer border-r border-gray-700 last:border-r-0 ${getCellBgColor(cell?.ownerTeamId ?? null)}`}
+                  className={`flex h-16 w-24 cursor-pointer flex-col items-center justify-center border-r border-gray-700 transition-all last:border-r-0 hover:bg-opacity-80 ${getCellBgColor(cell?.ownerTeamId ?? null)}`}
                   onClick={() => handleCellClick(pId, lId)}
                 >
                   {cell?.score !== null && (
-                    <div className="text-white text-xs font-bold">{cell.score}</div>
+                    <div className="text-xs font-bold text-white">{cell.score}</div>
                   )}
                 </div>
               );

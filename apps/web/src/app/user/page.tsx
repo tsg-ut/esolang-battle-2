@@ -129,7 +129,10 @@ export default function UserPage() {
               <h2 className="mb-6 border-b pb-2 text-xl font-semibold text-gray-900">ログイン</h2>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label htmlFor="login-username" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="login-username"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
                     ユーザ名
                   </label>
                   <input
@@ -141,7 +144,10 @@ export default function UserPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="login-password" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="login-password"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
                     パスワード
                   </label>
                   <input
@@ -166,7 +172,10 @@ export default function UserPage() {
               <h2 className="mb-6 border-b pb-2 text-xl font-semibold text-gray-900">新規登録</h2>
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
-                  <label htmlFor="register-username" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="register-username"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
                     ユーザ名
                   </label>
                   <input
@@ -178,7 +187,10 @@ export default function UserPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="register-password" className="mb-1 block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="register-password"
+                    className="mb-1 block text-sm font-medium text-gray-700"
+                  >
                     パスワード
                   </label>
                   <input

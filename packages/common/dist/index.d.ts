@@ -45,6 +45,31 @@ export declare const upsertProblemSchema: z.ZodObject<{
     title: z.ZodString;
     problemStatement: z.ZodString;
 }, z.core.$strip>;
+export declare const upsertContestSchema: z.ZodObject<{
+    id: z.ZodNullable<z.ZodNumber>;
+    name: z.ZodString;
+    startAt: z.ZodCoercedDate<unknown>;
+    endAt: z.ZodCoercedDate<unknown>;
+}, z.core.$strip>;
+export declare const upsertTeamSchema: z.ZodObject<{
+    id: z.ZodNullable<z.ZodNumber>;
+    color: z.ZodString;
+    contestId: z.ZodNumber;
+}, z.core.$strip>;
+export declare const upsertLanguageSchema: z.ZodObject<{
+    id: z.ZodNullable<z.ZodNumber>;
+    name: z.ZodString;
+    description: z.ZodString;
+    dockerImageId: z.ZodString;
+}, z.core.$strip>;
+export declare const upsertTestCaseSchema: z.ZodObject<{
+    id: z.ZodNullable<z.ZodNumber>;
+    problemId: z.ZodNumber;
+    input: z.ZodString;
+    output: z.ZodString;
+    isSample: z.ZodBoolean;
+    checkerScript: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
 export declare const updateUserTeamSchema: z.ZodObject<{
     userId: z.ZodNumber;
     teamId: z.ZodNullable<z.ZodNumber>;

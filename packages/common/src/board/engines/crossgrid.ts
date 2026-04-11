@@ -1,4 +1,4 @@
-import { BoardState, CrossGridBoardConfig, BoardSubmission } from '../types';
+import { BoardState, BoardSubmission, CrossGridBoardConfig } from '../types';
 import { BaseBoardEngine } from './base';
 
 export class CrossGridBoardEngine extends BaseBoardEngine<CrossGridBoardConfig> {

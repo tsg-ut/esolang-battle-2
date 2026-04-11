@@ -1,4 +1,4 @@
-import { BoardState, GridBoardConfig, BoardSubmission } from '../types';
+import { BoardState, BoardSubmission, GridBoardConfig } from '../types';
 import { BaseBoardEngine } from './base';
 
 export class GridBoardEngine extends BaseBoardEngine<GridBoardConfig> {

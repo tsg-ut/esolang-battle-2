@@ -13,14 +13,6 @@ export default function NavBar() {
 
   return (
     <div className="ml-auto flex gap-2">
-      <Link
-        href="/user"
-        className={`rounded px-4 py-2 ${
-          pathname === '/user' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-        }`}
-      >
-        ユーザ
-      </Link>
       {isAdmin && (
         <Link
           href="/admin/users"
@@ -28,9 +20,17 @@ export default function NavBar() {
             pathname === '/admin/users' ? 'bg-blue-600 text-white' : 'bg-gray-200'
           }`}
         >
-          Admin
+          Admin page
         </Link>
       )}
+      <Link
+        href="/user"
+        className={`rounded px-4 py-2 ${
+          pathname === '/user' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+        }`}
+      >
+        ユーザー
+      </Link>
     </div>
   );
 }

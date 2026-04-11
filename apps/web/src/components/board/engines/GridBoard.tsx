@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+
 import { useRouter } from 'next/navigation';
+
 import { BoardState, GridBoardConfig } from '@esolang-battle/common';
 
 type GridBoardProps = {
@@ -43,7 +45,7 @@ export const GridBoard: React.FC<GridBoardProps> = ({ config, state, contestId }
         const info = cellInfo[cellId];
         const cell = state[cellId];
 
-        if (!info) return <div key={cellId} className="bg-gray-900 rounded-md" />;
+        if (!info) return <div key={cellId} className="rounded-md bg-gray-900" />;
 
         return (
           <div

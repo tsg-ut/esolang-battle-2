@@ -36,6 +36,7 @@ export const submissionFilterSchema = z
 export const testCodeSchema = z.object({
   code: z.string(),
   languageId: z.number(),
+  stdin: z.string().optional(),
 });
 
 export const submitCodeSchema = z.object({
@@ -56,6 +57,35 @@ export const upsertProblemSchema = z.object({
   problemStatement: z.string(),
 });
 
+export const upsertContestSchema = z.object({
+  id: z.number().nullable(),
+  name: z.string(),
+  startAt: z.coerce.date(),
+  endAt: z.coerce.date(),
+});
+
+export const upsertTeamSchema = z.object({
+  id: z.number().nullable(),
+  color: z.string(),
+  contestId: z.number(),
+});
+
+export const upsertLanguageSchema = z.object({
+  id: z.number().nullable(),
+  name: z.string(),
+  description: z.string(),
+  dockerImageId: z.string(),
+});
+
+export const upsertTestCaseSchema = z.object({
+  id: z.number().nullable(),
+  problemId: z.number(),
+  input: z.string(),
+  output: z.string(),
+  isSample: z.boolean(),
+  checkerScript: z.string().nullable().optional(),
+});
+
 export const updateUserTeamSchema = z.object({
   userId: z.number(),
   teamId: z.number().nullable(),
@@ -65,24 +95,24 @@ export type TeamInfo = {
   id: number;
   color: string;
   contestId: number;
-}
+};
 
 export type UserInfo = {
   id: number;
   name: string;
   isAdmin: boolean;
   teams: TeamInfo[];
-}
+};
 
 export type LanguageSummary = {
   id: number;
   name: string;
   description: string;
-}
+};
 
 export type ProblemSummary = {
   id: number;
   title: string;
-}
+};
 
 export * from './board';

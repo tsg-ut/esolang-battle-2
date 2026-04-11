@@ -5,3 +5,32 @@ export async function findAllTeams(prisma: PrismaClient) {
     orderBy: { id: 'asc' },
   });
 }
+
+export async function findTeamById(prisma: PrismaClient, id: number) {
+  return await prisma.team.findUnique({
+    where: { id },
+  });
+}
+
+export async function createTeam(prisma: PrismaClient, data: { color: string; contestId: number }) {
+  return await prisma.team.create({
+    data,
+  });
+}
+
+export async function updateTeam(
+  prisma: PrismaClient,
+  id: number,
+  data: { color?: string; contestId?: number }
+) {
+  return await prisma.team.update({
+    where: { id },
+    data,
+  });
+}
+
+export async function deleteTeam(prisma: PrismaClient, id: number) {
+  return await prisma.team.delete({
+    where: { id },
+  });
+}

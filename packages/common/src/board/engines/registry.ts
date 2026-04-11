@@ -1,7 +1,7 @@
 import { IBoardEngine } from '../types';
+import { CrossGridBoardEngine } from './crossgrid';
 import { GridBoardEngine } from './grid';
 import { HoneycombBoardEngine } from './honeycomb';
-import { CrossGridBoardEngine } from './crossgrid';
 
 const engines: Record<string, IBoardEngine<any>> = {
   GRID: new GridBoardEngine(),

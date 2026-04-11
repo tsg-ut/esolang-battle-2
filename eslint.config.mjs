@@ -1,12 +1,12 @@
 import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
+import nextPlugin from '@next/eslint-plugin-next';
+import eslintConfigPrettier from 'eslint-config-prettier';
+import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
-import nextPlugin from '@next/eslint-plugin-next';
-import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
 import unusedImportsPlugin from 'eslint-plugin-unused-imports';
-import eslintConfigPrettier from 'eslint-config-prettier';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -14,13 +14,7 @@ export default tseslint.config(
   ...tseslint.configs.stylistic, // スタイルに関する型ルール
 
   {
-    ignores: [
-      '**/node_modules/**',
-      '**/.next/**',
-      '**/dist/**',
-      '**/build/**',
-      '**/generated/**',
-    ],
+    ignores: ['**/node_modules/**', '**/.next/**', '**/dist/**', '**/build/**', '**/generated/**'],
   },
 
   // Base config for all TS files
@@ -100,5 +94,5 @@ export default tseslint.config(
   },
 
   // 最後に Prettier 設定を入れてルール競合を回避
-  eslintConfigPrettier,
+  eslintConfigPrettier
 );

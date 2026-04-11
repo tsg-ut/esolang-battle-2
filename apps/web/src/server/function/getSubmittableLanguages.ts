@@ -11,18 +11,18 @@ type RawPlacement = {
   kind?: RawCellKind;
   languageId?: number;
   color?: string;
-}
+};
 
 type RawEdgesEndpoint = {
   id?: string;
   x?: number;
   y?: number;
-}
+};
 
 type RawEdge = {
   from: RawEdgesEndpoint;
   to: RawEdgesEndpoint;
-}
+};
 
 type RawEdgesJson = RawEdge[];
 

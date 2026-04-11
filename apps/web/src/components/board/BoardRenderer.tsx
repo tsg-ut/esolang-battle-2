@@ -1,11 +1,14 @@
 'use client';
 
 import React from 'react';
-import { BoardData, BoardState, BoardConfig } from '@esolang-battle/common';
+
 import { trpc } from '@/utils/trpc';
+
+import { BoardData, BoardState } from '@esolang-battle/common';
+
+import { CrossGridBoard } from './engines/CrossGridBoard';
 import { GridBoard } from './engines/GridBoard';
 import { HoneycombBoard } from './engines/HoneycombBoard';
-import { CrossGridBoard } from './engines/CrossGridBoard';
 
 const engines: Record<string, React.FC<{ config: any; state: BoardState; contestId: number }>> = {
   GRID: GridBoard as any,
@@ -29,7 +32,7 @@ export function BoardRenderer({ initialData }: { initialData: BoardData }) {
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4 overflow-auto">
+    <div className="flex h-full w-full items-center justify-center overflow-auto p-4">
       <EngineComponent config={board.config} state={board.state} contestId={board.contestId} />
     </div>
   );
