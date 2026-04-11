@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 
-import NavBar from '@/components/NavBar';
 import { trpc } from '@/utils/trpc';
 
 export default function ContestsPage() {
@@ -11,9 +10,8 @@ export default function ContestsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-center border-b border-gray-200 pb-4">
+        <div className="mb-8 border-b border-gray-200 pb-4">
           <h1 className="text-2xl font-bold text-gray-900">コンテスト一覧</h1>
-          <NavBar />
         </div>
 
         {isLoading ? (

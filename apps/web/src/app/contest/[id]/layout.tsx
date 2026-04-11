@@ -3,8 +3,6 @@
 import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 
-import NavBar from '@/components/NavBar';
-
 export default function ContestLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const params = useParams();
@@ -22,16 +20,6 @@ export default function ContestLayout({ children }: { children: React.ReactNode 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center">
-          <Link
-            href="/contests"
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
-          >
-            <span>&lt;</span> コンテスト一覧
-          </Link>
-          <NavBar />
-        </div>
-
         <div className="overflow-hidden rounded-lg bg-white shadow">
           <div className="flex border-b border-gray-200">
             {tabs.map((tab) => {
