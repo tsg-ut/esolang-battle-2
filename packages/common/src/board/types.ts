@@ -85,6 +85,9 @@ export type BoardSubmission = {
 export interface IBoardEngine<TConfig extends BoardConfig = BoardConfig> {
   calculateUpdate(config: TConfig, state: BoardState, submission: BoardSubmission): BoardState;
 
+  // 提出に対してどのセルがターゲットになるかを返す
+  getTargetCellId(config: TConfig, submission: BoardSubmission): string | null;
+
   // 初期状態を生成する（コンテスト作成時用）
   createInitialState(config: TConfig): BoardState;
 }

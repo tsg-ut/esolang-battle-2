@@ -158,3 +158,89 @@ export async function runAllTestCasesInSingleContainer(
 ): Promise<Record<number, DockerResult>> {
   return await runExecutionBatch(image, code, testCases, timeoutMs, BATCH_MEMORY_LIMIT);
 }
+
+/**
+ * ジャッジ用スクリプト (Checker/Aggregator) を実行する
+ */
+export async function runJudgeScript(
+  image: string,
+  code: string,
+  inputJson: any,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
+): Promise<any> {
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'esolang-judge-'));
+  const imageSegments = image.split('/');
+  const cmd = imageSegments[imageSegments.length - 1];
+
+  try {
+    const codeFileName = 'judge.src';
+    await fs.writeFile(path.join(tmpDir, codeFileName), code, 'utf8');
+    await fs.writeFile(path.join(tmpDir, 'input.json'), JSON.stringify(inputJson), 'utf8');
+
+    // 実行コマンド: JSONファイルをリダイレクトして流し込む
+    const runnerCmd = `${cmd} /volume/${codeFileName} < /volume/input.json`;
+
+    const container = await docker.createContainer({
+      Image: image,
+      Cmd: ['sh', '-c', runnerCmd],
+      HostConfig: {
+        ...getHostConfig(MEMORY_LIMIT),
+        Binds: [`${tmpDir}:/volume:rw`],
+      },
+    });
+
+    await container.start();
+
+    const waitPromise = container.wait();
+    const timeoutPromise = new Promise((resolve) =>
+      setTimeout(() => resolve({ timeout: true }), timeoutMs)
+    );
+
+    const raceResult: any = await Promise.race([waitPromise, timeoutPromise]);
+    const isTimeout = !!(raceResult && raceResult.timeout);
+
+    if (isTimeout) {
+      await container.kill().catch(() => {});
+    }
+
+    // 標準出力を取得
+    const logs = await container.logs({ stdout: true, stderr: true });
+    // Dockerのログ形式（ヘッダー付き）をデコード
+    const output = decodeDockerLogs(logs);
+
+    await container.remove({ force: true }).catch(() => {});
+
+    if (isTimeout) throw new Error('Judge script timeout');
+
+    try {
+      return JSON.parse(output.stdout.trim());
+    } catch (e) {
+      console.error('Failed to parse judge script output:', output.stdout);
+      throw new Error(`Invalid JSON from judge script: ${output.stderr}`);
+    }
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/**
+ * Docker logs (Buffer) から stdout/stderr を抽出するユーティリティ
+ */
+function decodeDockerLogs(buffer: Buffer): { stdout: string; stderr: string } {
+  let stdout = '';
+  let stderr = '';
+  let offset = 0;
+
+  while (offset < buffer.length) {
+    const type = buffer.readUInt8(offset);
+    const size = buffer.readUInt32BE(offset + 4);
+    const payload = buffer.toString('utf8', offset + 8, offset + 8 + size);
+
+    if (type === 1) stdout += payload;
+    else if (type === 2) stderr += payload;
+
+    offset += 8 + size;
+  }
+
+  return { stdout, stderr };
+}

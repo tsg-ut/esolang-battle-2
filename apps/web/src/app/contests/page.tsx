@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 import { trpc } from '@/utils/trpc';
 import { ClockCircleOutlined, TrophyOutlined } from '@ant-design/icons';
-import { Card, Col, Row, Spin, Tag, Typography, Space } from 'antd';
+import { Card, Col, Row, Spin, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
@@ -48,9 +48,7 @@ export default function ContestsPage() {
             <Text type="danger">Error: {error.message}</Text>
           </Card>
         ) : !contests || contests.length === 0 ? (
-          <Card className="text-center text-gray-500">
-            コンテストがありません。
-          </Card>
+          <Card className="text-center text-gray-500">コンテストがありません。</Card>
         ) : (
           <Row gutter={[24, 24]}>
             {contests.map((c) => (
@@ -68,7 +66,7 @@ export default function ContestsPage() {
                   >
                     <div className="space-y-4">
                       <div className="flex flex-col gap-1">
-                        <Text type="secondary" className="text-xs uppercase font-bold">
+                        <Text type="secondary" className="text-xs font-bold uppercase">
                           開催期間
                         </Text>
                         <div className="flex items-center gap-2 text-gray-700">
@@ -81,10 +79,12 @@ export default function ContestsPage() {
                           {dayjs(c.endAt).format('YYYY/MM/DD HH:mm')}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between border-t pt-4">
-                        <Text type="secondary" className="text-xs">ID: {c.id}</Text>
-                        <Text className="text-blue-600 font-medium">参加する →</Text>
+                        <Text type="secondary" className="text-xs">
+                          ID: {c.id}
+                        </Text>
+                        <Text className="font-medium text-blue-600">参加する →</Text>
                       </div>
                     </div>
                   </Card>

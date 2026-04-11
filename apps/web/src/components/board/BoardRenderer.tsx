@@ -9,11 +9,11 @@ import dayjs from 'dayjs';
 
 import { BoardData, BoardState } from '@esolang-battle/common';
 
-const { Text } = Typography;
-
 import { CrossGridBoard } from './engines/CrossGridBoard';
 import { GridBoard } from './engines/GridBoard';
 import { HoneycombBoard } from './engines/HoneycombBoard';
+
+const { Text } = Typography;
 
 const engines: Record<
   string,

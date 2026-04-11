@@ -68,6 +68,16 @@ model Language {
 
   submissions      Submission[]
   acceptedProblems Problem[]   @relation("ProblemAcceptedLanguages")
+
+  // Judge system relations
+  problemCheckers    Problem[]  @relation("ProblemCheckerLanguage")
+  problemAggregators Problem[]  @relation("ProblemAggregatorLanguage")
+  testCaseCheckers   TestCase[] @relation("TestCaseCheckerLanguage")
+}
+
+enum JudgeType {
+  BUILTIN
+  CUSTOM
 }
 
 /// A problem to be solved in the contest
@@ -79,6 +89,20 @@ model Problem {
   contest   Contest @relation(fields: [contestId], references: [id])
   contestId Int
 
+  checkerType       JudgeType @default(BUILTIN)
+  checkerName       String    @default("EXACT")
+  checkerScript     String?
+  checkerConfig     Json      @default("{}")
+  checkerLanguage   Language? @relation("ProblemCheckerLanguage", fields: [checkerLanguageId], references: [id])
+  checkerLanguageId Int?
+
+  aggregatorType       JudgeType @default(BUILTIN)
+  aggregatorName       String    @default("DEFAULT")
+  aggregatorScript     String?
+  aggregatorConfig     Json      @default("{}")
+  aggregatorLanguage   Language? @relation("ProblemAggregatorLanguage", fields: [aggregatorLanguageId], references: [id])
+  aggregatorLanguageId Int?
+
   submissions Submission[]
   testCases  TestCase[]
 
@@ -88,14 +112,17 @@ model Problem {
   testers          User[]     @relation("ProblemTesters")
 }
 
-/// Individual test case for a problem
+/// A test case for a problem
 model TestCase {
-  id      Int    @id @default(autoincrement())
-  input   String
+  id     Int    @id @default(autoincrement())
+  input  String
   /// checker script that looks at submission result and assigns score
-  checkerScript String?
-  output        String
-  isSample      Boolean
+  checkerScript     String?
+  checkerLanguage   Language? @relation("TestCaseCheckerLanguage", fields: [checkerLanguageId], references: [id])
+  checkerLanguageId Int?
+  output            String
+  isSample          Boolean
+
 
   problem   Problem   @relation(fields: [problemId], references: [id])
   problemId Int
@@ -114,6 +141,7 @@ model Execution {
   status        ExecutionStatus
   stdout        String?
   stderr        String?
+  message       String?   /// Additional info from checker
   executionTime Int       /// e.g. milliseconds
   executedAt    DateTime
 

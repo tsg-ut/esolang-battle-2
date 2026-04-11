@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { trpc } from '@/utils/trpc';
 import { Edit, useForm, useSelect } from '@refinedev/antd';
 import { useParsed } from '@refinedev/core';
@@ -18,6 +20,8 @@ export default function TestCaseEdit() {
     { enabled: !!testCaseId }
   );
 
+  const { data: allLanguages } = trpc.adminGetLanguages.useQuery();
+
   const currentValues = Form.useWatch([], form);
 
   const isChanged =
@@ -26,6 +30,8 @@ export default function TestCaseEdit() {
     (currentValues.input !== testCase.input ||
       currentValues.output !== testCase.output ||
       currentValues.isSample !== testCase.isSample ||
+      currentValues.checkerScript !== (testCase.checkerScript ?? undefined) ||
+      Number(currentValues.checkerLanguageId || 0) !== Number(testCase.checkerLanguageId || 0) ||
       currentValues.checkerScript !== testCase.checkerScript);
 
   const { selectProps: problemSelectProps } = useSelect({
@@ -51,9 +57,24 @@ export default function TestCaseEdit() {
         <Form.Item name="isSample" valuePropName="checked">
           <Checkbox>Is Sample?</Checkbox>
         </Form.Item>
-        <Form.Item label="Checker Script (Optional)" name="checkerScript">
-          <Input.TextArea rows={3} placeholder="Python script for checking" />
-        </Form.Item>
+
+        <div style={{ marginTop: '24px', borderTop: '1px solid #f0f0f0', paddingTop: '24px' }}>
+          <h3>Custom Checker (Overrides Problem Checker)</h3>
+          <Form.Item label="Checker Language" name="checkerLanguageId">
+            <Select
+              options={allLanguages?.map((l) => ({ label: l.name, value: l.id }))}
+              placeholder="Select language if using custom checker for this case"
+              allowClear
+            />
+          </Form.Item>
+          <Form.Item label="Checker Script" name="checkerScript">
+            <Input.TextArea
+              rows={10}
+              style={{ fontFamily: 'monospace' }}
+              placeholder="Script that returns CaseCheckerOutput JSON"
+            />
+          </Form.Item>
+        </div>
       </Form>
     </Edit>
   );

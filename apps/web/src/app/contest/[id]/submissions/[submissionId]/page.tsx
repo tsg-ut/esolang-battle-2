@@ -95,6 +95,12 @@ export default function SubmissionDetailPage() {
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 p-4">
+                {exec.message && (
+                  <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                    <span className="mr-2 font-bold uppercase">Checker Message:</span>
+                    {exec.message}
+                  </div>
+                )}
                 {exec.testcase.input && (
                   <div>
                     <span className="text-xs font-bold uppercase text-gray-400">Input</span>

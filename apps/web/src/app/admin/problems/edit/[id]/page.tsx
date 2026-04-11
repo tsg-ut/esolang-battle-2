@@ -34,13 +34,41 @@ export default function ProblemEdit() {
     { enabled: !!problemId }
   );
 
+  const normalizeConfig = (val: any) => {
+    if (!val) return '{}';
+    if (typeof val === 'string') {
+      try {
+        return JSON.stringify(JSON.parse(val));
+      } catch (e) {
+        return val;
+      }
+    }
+    return JSON.stringify(val);
+  };
+
+  const normalizeScript = (val: any) => val || undefined;
+
   // 変更があるかどうかの判定 (既に取得済みの problem を使用)
   const isInfoChanged =
     problem &&
     currentValues &&
     (currentValues.title !== problem.title ||
       currentValues.problemStatement !== problem.problemStatement ||
-      Number(currentValues.contestId) !== Number(problem.contestId));
+      Number(currentValues.contestId) !== Number(problem.contestId) ||
+      currentValues.checkerType !== problem.checkerType ||
+      currentValues.checkerName !== problem.checkerName ||
+      normalizeScript(currentValues.checkerScript) !== normalizeScript(problem.checkerScript) ||
+      Number(currentValues.checkerLanguageId || 0) !== Number(problem.checkerLanguageId || 0) ||
+      normalizeConfig(currentValues.checkerConfig) !== normalizeConfig(problem.checkerConfig) ||
+      currentValues.aggregatorType !== problem.aggregatorType ||
+      currentValues.aggregatorName !== problem.aggregatorName ||
+      normalizeScript(currentValues.aggregatorScript) !==
+        normalizeScript(problem.aggregatorScript) ||
+      Number(currentValues.aggregatorLanguageId || 0) !==
+        Number(problem.aggregatorLanguageId || 0) ||
+      normalizeConfig(currentValues.aggregatorConfig) !==
+        normalizeConfig(problem.aggregatorConfig));
+
   const { data: allLanguages } = trpc.adminGetLanguages.useQuery();
   const updateLanguagesMutation = trpc.adminUpdateProblemLanguages.useMutation();
 
@@ -53,7 +81,7 @@ export default function ProblemEdit() {
     }
   }, [problem]);
 
-  const isChanged =
+  const isLangChanged =
     JSON.stringify([...targetKeys].sort()) !== JSON.stringify([...initialKeys].sort());
 
   const handleSaveLanguages = async () => {
@@ -87,11 +115,10 @@ export default function ProblemEdit() {
   });
 
   // タブに応じてメインの保存ボタンを隠すためのプロパティ
-  // infoタブ以外（言語設定やテストケース）ではメイン保存ボタンを非表示にする
   const adjustedSaveButtonProps = {
     ...saveButtonProps,
     disabled: saveButtonProps.disabled || !isInfoChanged,
-    style: { display: activeTab === 'info' ? 'inline-flex' : 'none' },
+    style: { display: activeTab === 'info' || activeTab === 'judge' ? 'inline-flex' : 'none' },
   };
 
   return (
@@ -113,10 +140,32 @@ export default function ProblemEdit() {
         </Space>
       )}
     >
-      <Tabs activeKey={activeTab} onChange={handleTabChange}>
-        <Tabs.TabPane tab="Basic Information" key="info">
-          <div style={{ padding: '16px 0' }}>
-            <Form {...formProps} layout="vertical">
+      <Form
+        {...formProps}
+        form={form}
+        layout="vertical"
+        onFinish={(values) => {
+          try {
+            const formattedValues = {
+              ...values,
+              checkerConfig:
+                values.checkerConfig && typeof values.checkerConfig === 'string'
+                  ? JSON.parse(values.checkerConfig)
+                  : values.checkerConfig,
+              aggregatorConfig:
+                values.aggregatorConfig && typeof values.aggregatorConfig === 'string'
+                  ? JSON.parse(values.aggregatorConfig)
+                  : values.aggregatorConfig,
+            };
+            return formProps.onFinish?.(formattedValues);
+          } catch (e: any) {
+            message.error('Invalid JSON in config: ' + e.message);
+          }
+        }}
+      >
+        <Tabs activeKey={activeTab} onChange={handleTabChange}>
+          <Tabs.TabPane tab="Basic Information" key="info">
+            <div style={{ padding: '16px 0' }}>
               <Form.Item label="ID" name="id">
                 <Input disabled />
               </Form.Item>
@@ -133,52 +182,171 @@ export default function ProblemEdit() {
               >
                 <Input.TextArea rows={15} />
               </Form.Item>
-            </Form>
-          </div>
-        </Tabs.TabPane>
+            </div>
+          </Tabs.TabPane>
 
-        <Tabs.TabPane tab="Submittable Languages" key="languages">
-          <div style={{ padding: '16px 0' }}>
-            <Card
-              title="Select accepted languages for this problem"
-              extra={
-                <Button
-                  type="primary"
-                  icon={<SaveOutlined />}
-                  onClick={handleSaveLanguages}
-                  loading={updateLanguagesMutation.isPending}
-                  disabled={!isChanged}
-                >
-                  Save Languages
-                </Button>
-              }
-            >
-              <Transfer
-                dataSource={
-                  allLanguages?.map((lang) => ({
-                    key: lang.id,
-                    title: lang.name,
-                    description: lang.description,
-                  })) || []
+          <Tabs.TabPane tab="Judge Configuration" key="judge">
+            <div style={{ padding: '16px 0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+                <Card title="Case Checker" size="small">
+                  <Form.Item label="Type" name="checkerType" rules={[{ required: true }]}>
+                    <Select
+                      options={[
+                        { label: 'Built-in', value: 'BUILTIN' },
+                        { label: 'Custom Script', value: 'CUSTOM' },
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    noStyle
+                    shouldUpdate={(prev, curr) => prev.checkerType !== curr.checkerType}
+                  >
+                    {({ getFieldValue }) =>
+                      getFieldValue('checkerType') === 'BUILTIN' ? (
+                        <Form.Item label="Built-in Name" name="checkerName">
+                          <Select
+                            options={[
+                              { label: 'Exact Match', value: 'EXACT' },
+                              { label: 'Trim Whitespace', value: 'TRIM' },
+                              { label: 'Ignore All Whitespace', value: 'WHITESPACE' },
+                              { label: 'Ignore Case', value: 'IGNORE_CASE' },
+                              { label: 'Float Epsilon', value: 'FLOAT' },
+                              { label: 'Contains', value: 'CONTAINS' },
+                            ]}
+                          />
+                        </Form.Item>
+                      ) : (
+                        <>
+                          <Form.Item
+                            label="Script Language"
+                            name="checkerLanguageId"
+                            rules={[{ required: true }]}
+                          >
+                            <Select
+                              options={allLanguages?.map((l) => ({ label: l.name, value: l.id }))}
+                              placeholder="Select language for checker"
+                            />
+                          </Form.Item>
+                          <Form.Item label="Custom Script" name="checkerScript">
+                            <Input.TextArea rows={10} style={{ fontFamily: 'monospace' }} />
+                          </Form.Item>
+                        </>
+                      )
+                    }
+                  </Form.Item>
+
+                  <Form.Item
+                    label="Config (JSON)"
+                    name="checkerConfig"
+                    getValueProps={(value) => ({
+                      value: typeof value === 'string' ? value : JSON.stringify(value, null, 2),
+                    })}
+                  >
+                    <Input.TextArea rows={5} style={{ fontFamily: 'monospace' }} />
+                  </Form.Item>
+                </Card>
+
+                <Card title="Score Aggregator" size="small">
+                  <Form.Item label="Type" name="aggregatorType" rules={[{ required: true }]}>
+                    <Select
+                      options={[
+                        { label: 'Built-in', value: 'BUILTIN' },
+                        { label: 'Custom Script', value: 'CUSTOM' },
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    noStyle
+                    shouldUpdate={(prev, curr) => prev.aggregatorType !== curr.aggregatorType}
+                  >
+                    {({ getFieldValue }) =>
+                      getFieldValue('aggregatorType') === 'BUILTIN' ? (
+                        <Form.Item label="Built-in Name" name="aggregatorName">
+                          <Select
+                            options={[
+                              { label: 'Default (Code Length if All AC)', value: 'DEFAULT' },
+                            ]}
+                          />
+                        </Form.Item>
+                      ) : (
+                        <>
+                          <Form.Item
+                            label="Script Language"
+                            name="aggregatorLanguageId"
+                            rules={[{ required: true }]}
+                          >
+                            <Select
+                              options={allLanguages?.map((l) => ({ label: l.name, value: l.id }))}
+                              placeholder="Select language for aggregator"
+                            />
+                          </Form.Item>
+                          <Form.Item label="Custom Script" name="aggregatorScript">
+                            <Input.TextArea rows={10} style={{ fontFamily: 'monospace' }} />
+                          </Form.Item>
+                        </>
+                      )
+                    }
+                  </Form.Item>
+
+                  <Form.Item
+                    label="Config (JSON)"
+                    name="aggregatorConfig"
+                    getValueProps={(value) => ({
+                      value: typeof value === 'string' ? value : JSON.stringify(value, null, 2),
+                    })}
+                  >
+                    <Input.TextArea rows={5} style={{ fontFamily: 'monospace' }} />
+                  </Form.Item>
+                </Card>
+              </div>
+            </div>
+          </Tabs.TabPane>
+
+          <Tabs.TabPane tab="Submittable Languages" key="languages">
+            <div style={{ padding: '16px 0' }}>
+              <Card
+                title="Select accepted languages for this problem"
+                extra={
+                  <Button
+                    type="primary"
+                    icon={<SaveOutlined />}
+                    onClick={handleSaveLanguages}
+                    loading={updateLanguagesMutation.isPending}
+                    disabled={!isLangChanged}
+                  >
+                    Save Languages
+                  </Button>
                 }
-                showSearch
-                listStyle={{
-                  width: '45%',
-                  height: 400,
-                }}
-                targetKeys={targetKeys}
-                onChange={(nextKeys) => setTargetKeys(nextKeys as number[])}
-                render={(item) => item.title}
-                titles={['Available', 'Accepted']}
-              />
-            </Card>
-          </div>
-        </Tabs.TabPane>
+              >
+                <Transfer
+                  dataSource={
+                    allLanguages?.map((lang) => ({
+                      key: lang.id,
+                      title: lang.name,
+                      description: lang.description,
+                    })) || []
+                  }
+                  showSearch
+                  listStyle={{
+                    width: '45%',
+                    height: 400,
+                  }}
+                  targetKeys={targetKeys}
+                  onChange={(nextKeys) => setTargetKeys(nextKeys as number[])}
+                  render={(item) => item.title}
+                  titles={['Available', 'Accepted']}
+                />
+              </Card>
+            </div>
+          </Tabs.TabPane>
 
-        <Tabs.TabPane tab="Test Cases" key="testcases">
-          {problemId && <TestCasesSubList problemId={problemId} />}
-        </Tabs.TabPane>
-      </Tabs>
+          <Tabs.TabPane tab="Test Cases" key="testcases">
+            {problemId && <TestCasesSubList problemId={problemId} />}
+          </Tabs.TabPane>
+        </Tabs>
+      </Form>
     </Edit>
   );
 }

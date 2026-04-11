@@ -4,7 +4,7 @@ import { useParams, usePathname } from 'next/navigation';
 
 import { trpc } from '@/utils/trpc';
 import { ClockCircleOutlined } from '@ant-design/icons';
-import { Typography, Space, Tag, Spin } from 'antd';
+import { Space, Spin, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;

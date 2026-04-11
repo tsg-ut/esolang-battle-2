@@ -18,7 +18,20 @@ export async function findProblemById(prisma: PrismaClient, id: number) {
 
 export async function upsertProblem(
   prisma: PrismaClient,
-  data: { id: number | null; contestId: number; title: string; problemStatement: string }
+  data: {
+    id: number | null;
+    contestId: number;
+    title: string;
+    problemStatement: string;
+    checkerType?: any;
+    checkerName?: string;
+    checkerScript?: string | null;
+    checkerConfig?: any;
+    aggregatorType?: any;
+    aggregatorName?: string;
+    aggregatorScript?: string | null;
+    aggregatorConfig?: any;
+  }
 ) {
   const { id, ...payload } = data;
   if (id) {

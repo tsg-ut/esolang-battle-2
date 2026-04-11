@@ -58,6 +58,16 @@ export const upsertProblemSchema = z.object({
   contestId: z.number(),
   title: z.string(),
   problemStatement: z.string(),
+  checkerType: z.enum(['BUILTIN', 'CUSTOM']).optional(),
+  checkerName: z.string().optional(),
+  checkerScript: z.string().nullable().optional(),
+  checkerConfig: z.any().optional(),
+  checkerLanguageId: z.number().nullable().optional(),
+  aggregatorType: z.enum(['BUILTIN', 'CUSTOM']).optional(),
+  aggregatorName: z.string().optional(),
+  aggregatorScript: z.string().nullable().optional(),
+  aggregatorConfig: z.any().optional(),
+  aggregatorLanguageId: z.number().nullable().optional(),
 });
 
 export const upsertContestSchema = z.object({
@@ -116,6 +126,51 @@ export type LanguageSummary = {
 export type ProblemSummary = {
   id: number;
   title: string;
+};
+
+// --- Judge System Types ---
+
+export type JudgeStatus = 'AC' | 'WA' | 'TLE' | 'RE' | 'WJ';
+
+export type CaseCheckerInput = {
+  testCase: {
+    input: string;
+    expectedOutput: string;
+    isSample: boolean;
+  };
+  execution: {
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+    durationMs: number;
+  };
+  config: any; // Problem.checkerConfig
+};
+
+export type CaseCheckerOutput = {
+  status: JudgeStatus;
+  score: number; // 個別ケースの点数
+  message?: string;
+};
+
+export type ScoreAggregatorInput = {
+  submission: {
+    id: number;
+    codeLength: number;
+    languageId: number;
+  };
+  results: {
+    testCaseId: number;
+    isSample: boolean;
+    checkerResult: CaseCheckerOutput;
+  }[];
+  config: any; // Problem.aggregatorConfig
+};
+
+export type ScoreAggregatorOutput = {
+  status: JudgeStatus;
+  finalScore: number | null;
+  summaryMessage?: string;
 };
 
 export * from './board';
