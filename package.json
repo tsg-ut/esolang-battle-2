@@ -10,6 +10,8 @@
     "dev:worker": "npm run dev -w apps/worker",
     "build": "npm run build --workspaces",
     "generate": "npm run generate -w packages/db",
+    "migrate": "npm run migrate -w packages/db",
+    "studio": "npm run studio -w packages/db",
     "format": "prettier --write .",
     "check-format": "prettier --check .",
     "lint": "eslint .",
