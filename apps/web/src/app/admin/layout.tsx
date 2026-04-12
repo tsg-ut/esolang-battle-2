@@ -136,6 +136,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   hide: true,
                 },
               },
+
+              // --- ドキュメント ---
+              {
+                name: 'docs',
+                meta: { label: 'Documentation', icon: <FileTextOutlined /> },
+              },
+              {
+                name: 'judge_docs',
+                list: '/admin/docs/judge',
+                meta: { label: 'Judge System Guide', parent: 'docs' },
+              },
+              {
+                name: 'board_docs',
+                list: '/admin/docs/board',
+                meta: { label: 'Board Config Guide', parent: 'docs' },
+              },
             ]}
             options={{
               syncWithLocation: true,
