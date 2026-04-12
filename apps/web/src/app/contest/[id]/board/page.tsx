@@ -12,8 +12,8 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
   const boardData = await getBoard(prisma, contestId);
 
   return (
-    <div className="flex h-[calc(100vh-80px)] w-full flex-col items-center">
-      <h1 className="my-4 text-2xl font-bold">Scoreboard</h1>
+    <div className="flex h-[calc(100vh-80px)] w-full flex-col items-center overflow-hidden p-2">
+      <h1 className="mb-2 text-xl font-bold">Scoreboard</h1>
       <BoardRenderer initialData={boardData} />
     </div>
   );

@@ -32,7 +32,7 @@ export const contestRouter = router({
   getTeams: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
     return await ctx.prisma.team.findMany({
       where: { contestId: input.contestId },
-      select: { id: true, color: true },
+      select: { id: true, name: true, color: true },
     });
   }),
   getStandings: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {

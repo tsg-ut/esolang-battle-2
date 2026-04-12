@@ -162,7 +162,6 @@ export async function runAllTestCasesInSingleContainer(
   return await runExecutionBatch(image, code, testCases, timeoutMs, BATCH_MEMORY_LIMIT);
 }
 
-
 /**
  * ジャッジ用スクリプト (Checker/Aggregator) を実行する
  */
