@@ -42,6 +42,7 @@ export const submissionRouter = router({
         code: submission.code,
         codeLength: submission.codeLength,
         score: submission.score,
+        status: submission.status,
         submittedAt: submission.submittedAt,
         language: {
           id: submission.language.id,

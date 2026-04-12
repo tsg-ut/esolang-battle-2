@@ -72,12 +72,12 @@ export default function StandingsPage() {
     },
     {
       title: 'チーム',
-      dataIndex: 'teamColor',
-      key: 'teamColor',
-      render: (color: string) => (
+      dataIndex: 'teamName',
+      key: 'teamName',
+      render: (name: string, record: any) => (
         <div className="flex items-center gap-2">
-          <div className="h-4 w-4 rounded-full" style={{ backgroundColor: color }} />
-          <span className="font-bold">{color}</span>
+          <div className="h-4 w-4 rounded-full" style={{ backgroundColor: record.teamColor }} />
+          <span className="font-bold">{name}</span>
         </div>
       ),
     },

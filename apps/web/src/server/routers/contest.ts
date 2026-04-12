@@ -95,7 +95,7 @@ export const contestRouter = router({
       return {
         userId: user.id,
         userName: user.name,
-        teamName: user.teams[0]?.color ?? 'None',
+        teamName: user.teams[0]?.name || user.teams[0]?.color || 'None',
         problemScores,
         totalScore,
       };
@@ -126,6 +126,7 @@ export const contestRouter = router({
 
       return {
         teamId: team.id,
+        teamName: team.name || team.color,
         teamColor: team.color,
         problemScores,
         totalScore,

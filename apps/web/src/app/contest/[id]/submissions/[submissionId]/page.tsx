@@ -5,6 +5,7 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 
 import { trpc } from '@/utils/trpc';
+import { Tag } from 'antd';
 
 export default function SubmissionDetailPage() {
   const params = useParams();
@@ -44,12 +45,26 @@ export default function SubmissionDetailPage() {
     <div className="max-w-5xl space-y-8 pb-12">
       <div className="flex items-center justify-between border-b pb-4">
         <h2 className="text-2xl font-bold text-gray-900">提出詳細 #{submission.id}</h2>
-        <div className="text-sm text-gray-500">
-          提出時刻: {new Date(submission.submittedAt).toLocaleString()}
+        <div className="flex items-center gap-4">
+          <Tag
+            color={
+              submission.status === 'AC'
+                ? 'success'
+                : submission.status === 'WJ'
+                  ? 'default'
+                  : 'error'
+            }
+            className="px-3 py-1 text-sm font-bold"
+          >
+            {submission.status}
+          </Tag>
+          <div className="text-sm text-gray-500">
+            提出時刻: {new Date(submission.submittedAt).toLocaleString()}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         <div className="rounded-lg border bg-white p-4 shadow-sm">
           <span className="mb-1 block text-xs font-bold uppercase text-gray-500">問題</span>
           <span className="text-lg font-medium">{submission.problem.title}</span>
@@ -59,9 +74,15 @@ export default function SubmissionDetailPage() {
           <span className="text-lg font-medium">{submission.language.name}</span>
         </div>
         <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <span className="mb-1 block text-xs font-bold uppercase text-gray-500">ステータス</span>
+          <div className={`text-lg font-bold ${getStatusColor(submission.status)}`}>
+            {submission.status}
+          </div>
+        </div>
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
           <span className="mb-1 block text-xs font-bold uppercase text-gray-500">スコア</span>
           <span className="font-mono text-2xl font-bold text-blue-600">
-            {submission.score !== null ? submission.score : '採点中...'}
+            {submission.score !== null ? submission.score : '-'}
           </span>
           <span className="ml-2 text-sm text-gray-400">({submission.codeLength} bytes)</span>
         </div>

@@ -12,7 +12,10 @@ export async function findTeamById(prisma: PrismaClient, id: number) {
   });
 }
 
-export async function createTeam(prisma: PrismaClient, data: { color: string; contestId: number }) {
+export async function createTeam(
+  prisma: PrismaClient,
+  data: { name?: string; color: string; contestId: number }
+) {
   return await prisma.team.create({
     data,
   });
@@ -21,7 +24,7 @@ export async function createTeam(prisma: PrismaClient, data: { color: string; co
 export async function updateTeam(
   prisma: PrismaClient,
   id: number,
-  data: { color?: string; contestId?: number }
+  data: { name?: string; color?: string; contestId?: number }
 ) {
   return await prisma.team.update({
     where: { id },

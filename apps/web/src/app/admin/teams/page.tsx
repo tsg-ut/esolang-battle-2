@@ -9,11 +9,12 @@ import {
   EditButton,
   FilterDropdown,
   List,
-  TagField,
   useSelect,
   useTable,
 } from '@refinedev/antd';
-import { Button, Input, Select, Space, Table, Tooltip } from 'antd';
+import { Button, Input, Select, Space, Table, Tooltip, Typography } from 'antd';
+
+const { Text } = Typography;
 
 export default function TeamList() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -54,11 +55,18 @@ export default function TeamList() {
           dataIndex="id"
           title="ID"
           sorter
+          width={80}
           filterDropdown={(props) => (
             <FilterDropdown {...props}>
               <Input type="number" placeholder="Exact ID" />
             </FilterDropdown>
           )}
+        />
+        <Table.Column
+          dataIndex="name"
+          title="Name"
+          sorter
+          render={(val) => val || <span className="italic text-gray-400">(Unnamed)</span>}
         />
         <Table.Column
           dataIndex="contestId"
@@ -85,7 +93,15 @@ export default function TeamList() {
         <Table.Column
           dataIndex="color"
           title="Color"
-          render={(val: string) => <TagField value={val} color={val} />}
+          render={(val: string) => (
+            <div className="flex items-center gap-2">
+              <div
+                className="h-4 w-4 rounded-full border border-gray-200"
+                style={{ backgroundColor: val }}
+              />
+              <Text code>{val}</Text>
+            </div>
+          )}
         />
         <Table.Column
           title="Actions"

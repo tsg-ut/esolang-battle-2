@@ -43,7 +43,7 @@ export default function UserEdit() {
   // For team selection
   const { selectProps: teamSelectProps } = useSelect({
     resource: 'teams',
-    optionLabel: (item) => `C#${item.contestId}: ${item.color} (#${item.id})`,
+    optionLabel: (item) => `C#${item.contestId}: ${item.name || item.color} (#${item.id})`,
     optionValue: 'id',
   });
 

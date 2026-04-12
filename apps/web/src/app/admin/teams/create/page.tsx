@@ -5,10 +5,13 @@ import { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { Create, useForm, useSelect } from '@refinedev/antd';
-import { Form, Input, Select } from 'antd';
+import { ColorPicker, Form, Input, Select } from 'antd';
 
 export default function TeamCreate() {
-  const { formProps, saveButtonProps, form } = useForm();
+  const [form] = Form.useForm();
+  const { formProps, saveButtonProps } = useForm({
+    form,
+  });
   const searchParams = useSearchParams();
   const contestId = searchParams.get('contestId');
 
@@ -26,12 +29,21 @@ export default function TeamCreate() {
 
   return (
     <Create saveButtonProps={saveButtonProps}>
-      <Form {...formProps} layout="vertical">
+      <Form {...formProps} form={form} layout="vertical" initialValues={{ color: '#1677ff' }}>
         <Form.Item label="Contest" name="contestId" rules={[{ required: true }]}>
           <Select {...contestSelectProps} disabled={!!contestId} />
         </Form.Item>
-        <Form.Item label="Color" name="color" rules={[{ required: true }]}>
-          <Input placeholder="e.g. red, #ff0000" />
+        <Form.Item label="Team Name" name="name" rules={[{ required: true }]}>
+          <Input placeholder="e.g. Team Blue" />
+        </Form.Item>
+        <Form.Item label="Color" name="color" rules={[{ required: true }]} trigger="onChange">
+          <ColorPicker
+            showText
+            format="hex"
+            onChange={(_, hex) => {
+              form.setFieldsValue({ color: hex });
+            }}
+          />
         </Form.Item>
       </Form>
     </Create>

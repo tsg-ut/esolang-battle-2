@@ -50,12 +50,7 @@ export const trpcDataProvider = (): DataProvider => ({
         data = await client.adminGetBoards.query();
         break;
       case 'submissions':
-        {
-          const contestId = getFilterValue('contestId');
-          data = await client.getSubmissions.query({
-            contestId: contestId ? Number(contestId) : undefined,
-          });
-        }
+        data = await client.adminGetSubmissions.query();
         break;
       default:
         throw new Error(`Unknown resource: ${resource}`);

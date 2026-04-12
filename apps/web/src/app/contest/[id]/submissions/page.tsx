@@ -44,6 +44,12 @@ export default function SubmissionsPage() {
       filter.languageId = selected.map(Number);
     }
   }
+  if (tableParams.filters?.status) {
+    const selected = tableParams.filters.status;
+    if (selected && selected.length > 0) {
+      filter.status = selected;
+    }
+  }
 
   if (tableParams.sortField) {
     filter.orderBy = tableParams.sortField;
@@ -98,16 +104,19 @@ export default function SubmissionsPage() {
       key: 'team',
       render: (_, record) => {
         const team = record.user.teams.find((t: any) => t.contestId === contestId);
-        return team ? (
-          <Tag
-            color={
-              team.color === 'red' ? 'error' : team.color === 'blue' ? 'processing' : undefined
-            }
-          >
-            {team.color}
-          </Tag>
-        ) : (
-          '-'
+        if (!team) {
+          return <span className="italic text-gray-400">無所属</span>;
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <div
+              className="h-3 w-3 flex-shrink-0 rounded-full border border-gray-200"
+              style={{ backgroundColor: team.color }}
+            />
+            <span className={!team.name ? 'italic text-gray-500' : 'font-medium'}>
+              {team.name || `(名前なし: ${team.color})`}
+            </span>
+          </div>
         );
       },
     },
@@ -126,6 +135,28 @@ export default function SubmissionsPage() {
       filters: languages?.map((l) => ({ text: l.name, value: l.id })),
       filterSearch: true,
       render: (_, record) => record.language.name,
+    },
+    {
+      title: 'ステータス',
+      dataIndex: 'status',
+      key: 'status',
+      filters: [
+        { text: 'AC', value: 'AC' },
+        { text: 'WA', value: 'WA' },
+        { text: 'TLE', value: 'TLE' },
+        { text: 'RE', value: 'RE' },
+        { text: 'WJ', value: 'WJ' },
+      ],
+      render: (status: string) => {
+        const colorMap: any = {
+          AC: 'success',
+          WA: 'warning',
+          TLE: 'warning',
+          RE: 'error',
+          WJ: 'default',
+        };
+        return <Tag color={colorMap[status] || 'default'}>{status}</Tag>;
+      },
     },
     {
       title: '長',

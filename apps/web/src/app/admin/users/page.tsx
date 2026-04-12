@@ -67,7 +67,7 @@ export default function UserList() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
               {(teams || []).map((t) => (
                 <Tag key={t.id} color="blue">
-                  C#{t.contestId}: #{t.id} ({t.color})
+                  C#{t.contestId}: #{t.id} ({t.name || t.color})
                 </Tag>
               ))}
             </div>

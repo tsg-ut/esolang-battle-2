@@ -79,6 +79,7 @@ export const upsertContestSchema = z.object({
 
 export const upsertTeamSchema = z.object({
   id: z.number().nullable(),
+  name: z.string().optional(),
   color: z.string(),
   contestId: z.number(),
 });

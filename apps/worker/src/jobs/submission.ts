@@ -226,6 +226,7 @@ export async function processSubmission(submissionId: number) {
     where: { id: submission.id },
     data: {
       score: finalResult.finalScore,
+      status: finalResult.status,
     },
   });
 

@@ -10,39 +10,25 @@ import {
   upsertTestCaseSchema,
 } from '@esolang-battle/common';
 import {
-  createContest,
-  createLanguage,
   createTeam,
-  deleteContest,
-  deleteLanguage,
   deleteProblem,
-  deleteTeam,
   deleteTestCase,
-  findAllContests,
-  findAllLanguages,
-  findAllUsersWithTeams,
   findTestCasesByProblemId,
-  findUserByIdWithTeams,
   recalculateBoard,
-  updateContest,
-  updateLanguage,
   updateTeam,
-  updateUserTeam,
   upsertTestCase,
 } from '@esolang-battle/db';
 
+import { submissionQueue } from '../queue';
 import { adminProcedure, router } from '../trpc';
 
 export const adminRouter = router({
   // Users
   adminGetUsers: adminProcedure.query(async ({ ctx }) => {
-    const users = await findAllUsersWithTeams(ctx.prisma);
-    return users.map((u) => ({
-      id: u.id,
-      name: u.name,
-      isAdmin: Boolean(u.isAdmin),
-      teams: u.teams.map((t) => ({ id: t.id, color: t.color, contestId: t.contestId })),
-    }));
+    return await ctx.prisma.user.findMany({
+      orderBy: { id: 'asc' },
+      include: { teams: true },
+    });
   }),
   adminGetUser: adminProcedure.input(z.object({ id: z.number() })).query(async ({ ctx, input }) => {
     const { findUserByIdWithTeams } = await import('@esolang-battle/db');
@@ -52,7 +38,12 @@ export const adminRouter = router({
       id: user.id,
       name: user.name,
       isAdmin: Boolean(user.isAdmin),
-      teams: user.teams.map((t) => ({ id: t.id, color: t.color, contestId: t.contestId })),
+      teams: user.teams.map((t) => ({
+        id: t.id,
+        name: t.name,
+        color: t.color,
+        contestId: t.contestId,
+      })),
     };
   }),
   adminCreateUser: adminProcedure
@@ -93,35 +84,55 @@ export const adminRouter = router({
     .input(updateUserTeamSchema)
     .mutation(async ({ ctx, input }) => {
       const { userId, teamId } = input;
+      const { findUserByIdWithTeams } = await import('@esolang-battle/db');
       const user = await findUserByIdWithTeams(ctx.prisma, userId);
       if (!user) throw new Error('User not found');
-      return await updateUserTeam(ctx.prisma, userId, teamId);
+
+      // 既存の所属を解除
+      await ctx.prisma.user.update({
+        where: { id: userId },
+        data: {
+          teams: {
+            set: teamId ? [{ id: teamId }] : [],
+          },
+        },
+      });
+      return { success: true };
+    }),
+  adminDeleteUser: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.prisma.user.delete({ where: { id: input.id } });
+    }),
+  adminDeleteUsers: adminProcedure
+    .input(z.object({ ids: z.array(z.number()) }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.prisma.user.deleteMany({ where: { id: { in: input.ids } } });
     }),
 
   // Contests
   adminGetContests: adminProcedure.query(async ({ ctx }) => {
-    return await findAllContests(ctx.prisma);
+    return await ctx.prisma.contest.findMany({ orderBy: { id: 'asc' } });
   }),
   adminGetContest: adminProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const { findContestById } = await import('@esolang-battle/db');
-      const contest = await findContestById(ctx.prisma, input.id);
-      if (!contest) throw new Error('Contest not found');
-      return contest;
+      return await ctx.prisma.contest.findUnique({
+        where: { id: input.id },
+      });
     }),
   adminUpsertContest: adminProcedure.input(upsertContestSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
     if (id) {
-      return await updateContest(ctx.prisma, id, data);
+      return await ctx.prisma.contest.update({ where: { id }, data });
     } else {
-      return await createContest(ctx.prisma, data);
+      return await ctx.prisma.contest.create({ data });
     }
   }),
   adminDeleteContest: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      return await deleteContest(ctx.prisma, input.id);
+      return await ctx.prisma.contest.delete({ where: { id: input.id } });
     }),
   adminDeleteContests: adminProcedure
     .input(z.object({ ids: z.array(z.number()) }))
@@ -162,7 +173,7 @@ export const adminRouter = router({
   adminDeleteTeam: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      return await deleteTeam(ctx.prisma, input.id);
+      return await ctx.prisma.team.delete({ where: { id: input.id } });
     }),
   adminDeleteTeams: adminProcedure
     .input(z.object({ ids: z.array(z.number()) }))
@@ -172,30 +183,27 @@ export const adminRouter = router({
 
   // Languages
   adminGetLanguages: adminProcedure.query(async ({ ctx }) => {
-    return await findAllLanguages(ctx.prisma);
+    return await ctx.prisma.language.findMany({ orderBy: { id: 'asc' } });
   }),
   adminGetLanguage: adminProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const { findLanguageById } = await import('@esolang-battle/db');
-      const language = await findLanguageById(ctx.prisma, input.id);
-      if (!language) throw new Error('Language not found');
-      return language;
+      return await ctx.prisma.language.findUnique({ where: { id: input.id } });
     }),
   adminUpsertLanguage: adminProcedure
     .input(upsertLanguageSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
       if (id) {
-        return await updateLanguage(ctx.prisma, id, data);
+        return await ctx.prisma.language.update({ where: { id }, data });
       } else {
-        return await createLanguage(ctx.prisma, data);
+        return await ctx.prisma.language.create({ data });
       }
     }),
   adminDeleteLanguage: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      return await deleteLanguage(ctx.prisma, input.id);
+      return await ctx.prisma.language.delete({ where: { id: input.id } });
     }),
   adminDeleteLanguages: adminProcedure
     .input(z.object({ ids: z.array(z.number()) }))
@@ -380,9 +388,45 @@ export const adminRouter = router({
     }),
 
   // Submissions
+  adminGetSubmissions: adminProcedure.query(async ({ ctx }) => {
+    const subs = await ctx.prisma.submission.findMany({
+      orderBy: { id: 'desc' },
+      include: {
+        problem: { include: { contest: true } },
+        language: true,
+        user: true,
+      },
+    });
+    return subs.map((s) => ({
+      ...s,
+      contestName: s.problem.contest.name,
+      problemTitle: s.problem.title,
+      languageName: s.language.name,
+      userName: s.user.name,
+    }));
+  }),
+  adminGetSubmission: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const sub = await ctx.prisma.submission.findUnique({
+        where: { id: input.id },
+        include: {
+          problem: { include: { contest: true } },
+          language: true,
+          user: true,
+        },
+      });
+      if (!sub) throw new Error('Submission not found');
+      return {
+        ...sub,
+        contestName: sub.problem.contest.name,
+      };
+    }),
   adminDeleteSubmission: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
+      // executions を先に削除
+      await ctx.prisma.execution.deleteMany({ where: { submissionId: input.id } });
       return await ctx.prisma.submission.delete({
         where: { id: input.id },
       });
@@ -390,6 +434,7 @@ export const adminRouter = router({
   adminDeleteSubmissions: adminProcedure
     .input(z.object({ ids: z.array(z.number()) }))
     .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.execution.deleteMany({ where: { submissionId: { in: input.ids } } });
       return await ctx.prisma.submission.deleteMany({
         where: { id: { in: input.ids } },
       });
@@ -398,10 +443,13 @@ export const adminRouter = router({
     .input(
       z.object({
         id: z.number(),
-        problemId: z.number().optional(),
-        languageId: z.number().optional(),
+        userId: z.number().optional(),
+        submittedAt: z.coerce.date().optional(),
+        status: z.enum(['AC', 'WA', 'TLE', 'RE', 'WJ']).optional(),
         score: z.number().nullable().optional(),
         code: z.string().optional(),
+        languageId: z.number().optional(),
+        problemId: z.number().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -414,5 +462,21 @@ export const adminRouter = router({
           codeLength: code ? code.length : undefined,
         },
       });
+    }),
+  adminRejudgeSubmissions: adminProcedure
+    .input(z.object({ ids: z.array(z.number()) }))
+    .mutation(async ({ ctx, input }) => {
+      const submissions = await ctx.prisma.submission.findMany({
+        where: { id: { in: input.ids } },
+      });
+
+      for (const sub of submissions) {
+        await ctx.prisma.submission.update({
+          where: { id: sub.id },
+          data: { status: 'WJ', score: null },
+        });
+        await submissionQueue.add('evaluate', { submissionId: sub.id });
+      }
+      return { success: true, count: submissions.length };
     }),
 });

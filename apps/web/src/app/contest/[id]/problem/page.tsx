@@ -22,7 +22,15 @@ export default function ProblemListPage() {
       {problems.map((problem) => (
         <div
           key={problem.id}
+          role="button"
+          tabIndex={0}
           onClick={() => router.push(`/contest/${contestId}/problem/${problem.id}`)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              router.push(`/contest/${contestId}/problem/${problem.id}`);
+            }
+          }}
           className="group cursor-pointer rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
         >
           <h3 className="mb-2 text-xl font-bold text-gray-900 group-hover:text-blue-600">

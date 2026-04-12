@@ -6,6 +6,7 @@ export type GetSubmissionsFilter = {
   problemId?: number | number[];
   languageId?: number | number[];
   contestId?: number;
+  status?: string | string[];
   orderBy?: 'id' | 'submittedAt' | 'codeLength' | 'score';
   order?: 'asc' | 'desc';
 };
@@ -20,6 +21,13 @@ export async function findSubmissions(prisma: PrismaClient, filter: GetSubmissio
     where.languageId = Array.isArray(filter.languageId)
       ? { in: filter.languageId }
       : filter.languageId;
+  }
+  if (filter.status) {
+    if (filter.status === 'ALL') {
+      // Do nothing
+    } else {
+      where.status = Array.isArray(filter.status) ? { in: filter.status } : filter.status;
+    }
   }
   if (filter.contestId) where.problem = { contestId: filter.contestId };
   if (filter.teamId) {

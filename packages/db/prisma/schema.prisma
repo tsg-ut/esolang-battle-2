@@ -28,6 +28,7 @@ model User {
 /// Teams that users belong to within a contest
 model Team {
   id    Int    @id @default(autoincrement())
+  name  String @default("")
   color String
 
   users   User[]
@@ -150,10 +151,11 @@ model Execution {
 
 /// A submitted solution to a problem
 model Submission {
-  id          Int      @id @default(autoincrement())
+  id          Int             @id @default(autoincrement())
   code        String
   codeLength  Int
   submittedAt DateTime
+  status      ExecutionStatus @default(WJ)
   score       Int?
 
   language   Language @relation(fields: [languageId], references: [id])

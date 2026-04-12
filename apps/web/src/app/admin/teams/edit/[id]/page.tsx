@@ -3,7 +3,7 @@
 import { trpc } from '@/utils/trpc';
 import { Edit, useForm, useSelect } from '@refinedev/antd';
 import { useParsed } from '@refinedev/core';
-import { Form, Input, Select } from 'antd';
+import { ColorPicker, Form, Input, Select } from 'antd';
 
 export default function TeamEdit() {
   const { id } = useParsed();
@@ -16,12 +16,14 @@ export default function TeamEdit() {
   const { data: team } = trpc.adminGetTeam.useQuery({ id: teamId ?? 0 }, { enabled: !!teamId });
 
   const currentValues = Form.useWatch([], form);
+  const initialData = team;
 
   const isChanged =
-    team &&
+    initialData &&
     currentValues &&
-    (currentValues.color !== team.color ||
-      Number(currentValues.contestId) !== Number(team.contestId));
+    (currentValues.name !== initialData.name ||
+      currentValues.color !== initialData.color ||
+      Number(currentValues.contestId) !== Number(initialData.contestId));
 
   const { selectProps: contestSelectProps } = useSelect({
     resource: 'contests',
@@ -37,8 +39,23 @@ export default function TeamEdit() {
         <Form.Item label="Contest" name="contestId" rules={[{ required: true }]}>
           <Select {...contestSelectProps} />
         </Form.Item>
-        <Form.Item label="Color" name="color" rules={[{ required: true }]}>
-          <Input placeholder="e.g. red, #ff0000" />
+        <Form.Item label="Team Name" name="name" rules={[{ required: true }]}>
+          <Input />
+        </Form.Item>
+        <Form.Item
+          label="Color"
+          name="color"
+          rules={[{ required: true }]}
+          getValueProps={(value) => ({ value: value || '#1677ff' })}
+          trigger="onChange"
+        >
+          <ColorPicker
+            showText
+            format="hex"
+            onChange={(_, hex) => {
+              form.setFieldsValue({ color: hex });
+            }}
+          />
         </Form.Item>
       </Form>
     </Edit>
