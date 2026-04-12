@@ -23,10 +23,11 @@ export async function findSubmissions(prisma: PrismaClient, filter: GetSubmissio
       : filter.languageId;
   }
   if (filter.status) {
-    if (filter.status === 'ALL') {
-      // Do nothing
+    const statuses = Array.isArray(filter.status) ? filter.status : [filter.status];
+    if (statuses.includes('ALL') || statuses.length === 0) {
+      // 'ALL' が含まれるか空ならフィルタしない
     } else {
-      where.status = Array.isArray(filter.status) ? { in: filter.status } : filter.status;
+      where.status = { in: statuses };
     }
   }
   if (filter.contestId) where.problem = { contestId: filter.contestId };

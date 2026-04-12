@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { trpc } from '@/utils/trpc';
 import { Button, Table, Tag } from 'antd';
@@ -15,52 +15,77 @@ type Scope = 'self' | 'team' | 'all';
 export default function SubmissionsPage() {
   const params = useParams();
   const contestId = Number(params.id);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const { data: me } = trpc.me.useQuery();
-  const [scope, setScope] = useState<Scope>('self');
-  const [tableParams, setTableParams] = useState<{
-    sortField?: string;
-    sortOrder?: string;
-    filters?: Record<string, FilterValue | null>;
-  }>({});
-
   const myTeam = me?.teams.find((t) => t.contestId === contestId);
 
-  // フィルタとソートの構築
-  const filter: any = { contestId };
-  if (scope === 'self' && me?.id) filter.userId = Number(me.id);
-  if (scope === 'team' && myTeam?.id) filter.teamId = Number(myTeam.id);
+  // URLから状態を取得
+  const scope = (searchParams.get('scope') as Scope) || 'self';
+  const currentPage = Number(searchParams.get('page')) || 1;
+  const sortField = searchParams.get('sortField') || undefined;
+  const sortOrder = searchParams.get('sortOrder') || undefined;
 
-  // テーブルのフィルタ（問題と言語）をバックエンドフィルタに統合
-  if (tableParams.filters?.problemId) {
-    const selected = tableParams.filters.problemId;
-    if (selected && selected.length > 0) {
-      filter.problemId = selected.map(Number);
-    }
-  }
-  if (tableParams.filters?.languageId) {
-    const selected = tableParams.filters.languageId;
-    if (selected && selected.length > 0) {
-      filter.languageId = selected.map(Number);
-    }
-  }
-  if (tableParams.filters?.status) {
-    const selected = tableParams.filters.status;
-    if (selected && selected.length > 0) {
-      filter.status = selected;
-    }
-  }
+  // 複数選択フィルタのデコード
+  const filterProblemIds = useMemo(
+    () => searchParams.getAll('problemId').map(Number),
+    [searchParams]
+  );
+  const filterLanguageIds = useMemo(
+    () => searchParams.getAll('languageId').map(Number),
+    [searchParams]
+  );
+  const filterStatuses = useMemo(() => searchParams.getAll('status'), [searchParams]);
 
-  if (tableParams.sortField) {
-    filter.orderBy = tableParams.sortField;
-    filter.order = tableParams.sortOrder === 'ascend' ? 'asc' : 'desc';
-  }
+  // URLパラメータを更新するユーティリティ
+  const updateUrl = useCallback(
+    (updates: Record<string, string | string[] | null | undefined>) => {
+      const params = new URLSearchParams(searchParams.toString());
 
-  const {
-    data: submissions,
-    isLoading,
-    error,
-  } = trpc.getSubmissions.useQuery(filter, {
+      Object.entries(updates).forEach(([key, value]) => {
+        params.delete(key);
+        if (Array.isArray(value)) {
+          value.forEach((v) => params.append(key, v));
+        } else if (value !== undefined && value !== null) {
+          params.set(key, value);
+        }
+      });
+
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [pathname, router, searchParams]
+  );
+
+  // tRPCフィルタの構築
+  const filter: any = useMemo(() => {
+    const f: any = { contestId };
+    if (scope === 'self' && me?.id) f.userId = Number(me.id);
+    if (scope === 'team' && myTeam?.id) f.teamId = Number(myTeam.id);
+
+    if (filterProblemIds.length > 0) f.problemId = filterProblemIds;
+    if (filterLanguageIds.length > 0) f.languageId = filterLanguageIds;
+    if (filterStatuses.length > 0) f.status = filterStatuses;
+
+    if (sortField) {
+      f.orderBy = sortField;
+      f.order = sortOrder === 'ascend' ? 'asc' : 'desc';
+    }
+    return f;
+  }, [
+    contestId,
+    scope,
+    me?.id,
+    myTeam?.id,
+    filterProblemIds,
+    filterLanguageIds,
+    filterStatuses,
+    sortField,
+    sortOrder,
+  ]);
+
+  const { data: submissions, isLoading } = trpc.getSubmissions.useQuery(filter, {
     enabled: !!me,
     refetchInterval: 5000,
   });
@@ -74,10 +99,14 @@ export default function SubmissionsPage() {
     sorter: SorterResult<any> | SorterResult<any>[]
   ) => {
     const s = Array.isArray(sorter) ? sorter[0] : sorter;
-    setTableParams({
-      filters,
+
+    updateUrl({
+      page: pagination.current ? String(pagination.current) : '1',
       sortField: s.field as string,
       sortOrder: s.order as string,
+      problemId: filters.problemId as string[],
+      languageId: filters.languageId as string[],
+      status: filters.status as string[],
     });
   };
 
@@ -87,6 +116,7 @@ export default function SubmissionsPage() {
       dataIndex: 'id',
       key: 'id',
       sorter: true,
+      defaultSortOrder: sortField === 'id' ? (sortOrder as any) : undefined,
       width: 80,
       render: (id: number) => (
         <Link href={`/contest/${contestId}/submissions/${id}`} className="font-mono text-blue-600">
@@ -104,9 +134,7 @@ export default function SubmissionsPage() {
       key: 'team',
       render: (_, record) => {
         const team = record.user.teams.find((t: any) => t.contestId === contestId);
-        if (!team) {
-          return <span className="italic text-gray-400">無所属</span>;
-        }
+        if (!team) return <span className="italic text-gray-400">無所属</span>;
         return (
           <div className="flex items-center gap-2">
             <div
@@ -124,7 +152,8 @@ export default function SubmissionsPage() {
       title: '問題',
       dataIndex: 'problemId',
       key: 'problemId',
-      filters: problems?.map((p) => ({ text: p.title, value: p.id })),
+      filteredValue: filterProblemIds.length > 0 ? filterProblemIds.map(String) : null,
+      filters: problems?.map((p) => ({ text: p.title, value: String(p.id) })),
       filterSearch: true,
       render: (_, record) => record.problem.title,
     },
@@ -132,7 +161,8 @@ export default function SubmissionsPage() {
       title: '言語',
       dataIndex: 'languageId',
       key: 'languageId',
-      filters: languages?.map((l) => ({ text: l.name, value: l.id })),
+      filteredValue: filterLanguageIds.length > 0 ? filterLanguageIds.map(String) : null,
+      filters: languages?.map((l) => ({ text: l.name, value: String(l.id) })),
       filterSearch: true,
       render: (_, record) => record.language.name,
     },
@@ -140,6 +170,7 @@ export default function SubmissionsPage() {
       title: 'ステータス',
       dataIndex: 'status',
       key: 'status',
+      filteredValue: filterStatuses.length > 0 ? filterStatuses : null,
       filters: [
         { text: 'AC', value: 'AC' },
         { text: 'WA', value: 'WA' },
@@ -163,6 +194,7 @@ export default function SubmissionsPage() {
       dataIndex: 'codeLength',
       key: 'codeLength',
       sorter: true,
+      defaultSortOrder: sortField === 'codeLength' ? (sortOrder as any) : undefined,
       align: 'center',
     },
     {
@@ -170,6 +202,7 @@ export default function SubmissionsPage() {
       dataIndex: 'score',
       key: 'score',
       sorter: true,
+      defaultSortOrder: sortField === 'score' ? (sortOrder as any) : undefined,
       align: 'center',
       render: (score: number | null) =>
         score !== null ? (
@@ -183,6 +216,7 @@ export default function SubmissionsPage() {
       dataIndex: 'submittedAt',
       key: 'submittedAt',
       sorter: true,
+      defaultSortOrder: sortField === 'submittedAt' ? (sortOrder as any) : undefined,
       render: (date: string) => new Date(date).toLocaleString(),
     },
     {
@@ -199,18 +233,24 @@ export default function SubmissionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex gap-2">
-        <Button type={scope === 'self' ? 'primary' : 'default'} onClick={() => setScope('self')}>
+        <Button
+          type={scope === 'self' ? 'primary' : 'default'}
+          onClick={() => updateUrl({ scope: 'self', page: '1' })}
+        >
           自分の提出
         </Button>
         <Button
           type={scope === 'team' ? 'primary' : 'default'}
           disabled={!myTeam}
-          onClick={() => setScope('team')}
+          onClick={() => updateUrl({ scope: 'team', page: '1' })}
         >
           自チームの提出
         </Button>
         {me?.isAdmin && (
-          <Button type={scope === 'all' ? 'primary' : 'default'} onClick={() => setScope('all')}>
+          <Button
+            type={scope === 'all' ? 'primary' : 'default'}
+            onClick={() => updateUrl({ scope: 'all', page: '1' })}
+          >
             全ての提出
           </Button>
         )}
@@ -222,7 +262,11 @@ export default function SubmissionsPage() {
         rowKey="id"
         loading={isLoading}
         onChange={handleTableChange}
-        pagination={{ pageSize: 20 }}
+        pagination={{
+          current: currentPage,
+          pageSize: 20,
+          showSizeChanger: false,
+        }}
         size="middle"
         bordered
       />
