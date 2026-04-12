@@ -168,7 +168,7 @@ export default function UserPage() {
               <Divider className="my-0" />
 
               <div>
-                <Title level={4} icon={<TeamOutlined />}>
+                <Title level={4}>
                   <TeamOutlined className="mr-2" />
                   所属チーム
                 </Title>

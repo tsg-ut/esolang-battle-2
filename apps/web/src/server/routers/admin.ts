@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 import {
+  BoardConfig,
+  BoardState,
   listProblemsSchema,
   updateUserTeamSchema,
   upsertContestSchema,
@@ -238,6 +240,8 @@ export const adminRouter = router({
       if (!problem) throw new Error('Problem not found');
       return {
         ...problem,
+        checkerConfig: problem.checkerConfig as any,
+        aggregatorConfig: problem.aggregatorConfig as any,
         contestName: problem.contest.name,
       };
     }),
@@ -342,6 +346,8 @@ export const adminRouter = router({
       if (!board) return null;
       return {
         ...board,
+        config: board.config as unknown as BoardConfig,
+        state: board.state as unknown as BoardState,
         contestName: board.contest.name,
       };
     }),
@@ -355,6 +361,8 @@ export const adminRouter = router({
       if (!board) throw new Error('Board not found');
       return {
         ...board,
+        config: board.config as unknown as BoardConfig,
+        state: board.state as unknown as BoardState,
         contestName: board.contest.name,
       };
     }),

@@ -1,143 +1,58 @@
+import { BoardSubmission, getBoardEngine } from '@esolang-battle/common';
 import { PrismaClient, findBoardByContestId } from '@esolang-battle/db';
 
-export type CellKey = string;
-
-type RawCellKind = 'PLAYABLE' | 'FIXED' | 'FIX';
-
-type RawPlacement = {
-  id?: string;
-  x?: number;
-  y?: number;
-  kind?: RawCellKind;
-  languageId?: number;
-  color?: string;
-};
-
-type RawEdgesEndpoint = {
-  id?: string;
-  x?: number;
-  y?: number;
-};
-
-type RawEdge = {
-  from: RawEdgesEndpoint;
-  to: RawEdgesEndpoint;
-};
-
-type RawEdgesJson = RawEdge[];
-
-type RawColorOfLanguages = Record<string, string>;
-
-function placementKey(p: RawPlacement): CellKey | null {
-  if (typeof p.id === 'string' && p.id.length > 0) return p.id;
-  if (typeof p.x === 'number' && typeof p.y === 'number') return `${p.x},${p.y}`;
-  return null;
-}
-
-function endpointKey(ep: RawEdgesEndpoint): CellKey | null {
-  if (typeof ep.id === 'string' && ep.id.length > 0) return ep.id;
-  if (typeof ep.x === 'number' && typeof ep.y === 'number') return `${ep.x},${ep.y}`;
-  return null;
-}
-
-function buildIndexByKey(placements: RawPlacement[]): Map<CellKey, number> {
-  const indexByKey = new Map<CellKey, number>();
-  placements.forEach((p, index) => {
-    const key = placementKey(p);
-    if (key !== null) indexByKey.set(key, index);
-  });
-  return indexByKey;
-}
-
-function buildAdjacency(placements: RawPlacement[], rawEdges: unknown): Map<number, number[]> {
-  const adjacency = new Map<number, number[]>();
-  const indexByKey = buildIndexByKey(placements);
-  const edges = (rawEdges ?? []) as RawEdgesJson;
-  if (!Array.isArray(edges)) return adjacency;
-
-  for (const edge of edges) {
-    if (!edge || !edge.from || !edge.to) continue;
-    const fromKey = endpointKey(edge.from);
-    const toKey = endpointKey(edge.to);
-    if (fromKey === null || toKey === null) continue;
-    const fromIndex = indexByKey.get(fromKey);
-    const toIndex = indexByKey.get(toKey);
-    if (fromIndex === undefined || toIndex === undefined) continue;
-
-    let fromNeighbors = adjacency.get(fromIndex);
-    if (!fromNeighbors) {
-      fromNeighbors = [];
-      adjacency.set(fromIndex, fromNeighbors);
-    }
-    fromNeighbors.push(toIndex);
-
-    let toNeighbors = adjacency.get(toIndex);
-    if (!toNeighbors) {
-      toNeighbors = [];
-      adjacency.set(toIndex, toNeighbors);
-    }
-    toNeighbors.push(fromIndex);
-  }
-  return adjacency;
-}
-
-function normalizeOwnerColor(raw: string | undefined): 'red' | 'blue' | 'neutral' {
-  if (!raw) return 'neutral';
-  const lower = raw.toLowerCase();
-  if (lower === 'red' || lower === 'blue') return lower;
-  return 'neutral';
-}
-
+/**
+ * チームが現在提出可能な言語IDの一覧を取得する
+ */
 export async function getSubmittableLanguageIdsForTeam(
   prisma: PrismaClient,
   teamId: number,
   contestId: number
 ): Promise<number[]> {
-  const team = await prisma.team.findUnique({ where: { id: teamId } });
-  if (!team) throw new Error(`Team ${teamId} not found`);
-
-  const teamColor = normalizeOwnerColor(team.color);
-
   const board = await findBoardByContestId(prisma, contestId);
   if (!board) return [];
 
-  const placements = (board.dispositionOfLanguages ?? []) as unknown as RawPlacement[];
-  const colorConfig = (board.colorOfLanguages ?? {}) as unknown as RawColorOfLanguages;
+  const engine = getBoardEngine(board.type);
+  const config = board.config as any;
+  const state = board.state as any;
 
-  if (!Array.isArray(placements)) return [];
+  // 全言語を取得して、それぞれの言語について提出可能かチェックする
+  // 効率は悪いが、1言語=1セルの小規模なグリッドなら問題ない
+  const languages = await prisma.language.findMany();
+  const submittableIds: number[] = [];
 
-  const owners: ('red' | 'blue' | 'neutral')[] = placements.map((p) => {
-    const kind: RawCellKind = p.kind ?? 'PLAYABLE';
-    if (kind === 'FIXED') return normalizeOwnerColor(p.color);
-    if (typeof p.languageId === 'number') {
-      const raw = colorConfig[String(p.languageId)];
-      return normalizeOwnerColor(raw);
+  for (const lang of languages) {
+    // この言語がボード上のどのセルに対応するか特定
+    // BoardConfig の mapping は { [languageId]: cellId } の形式
+    const cellId = config.mapping?.[String(lang.id)];
+    if (!cellId) continue;
+
+    // 隣接チェックのためにダミーの提出オブジェクトを作成
+    const dummySubmission: BoardSubmission = {
+      id: 0,
+      problemId: 0,
+      languageId: lang.id,
+      userId: 0,
+      codeLength: 0,
+      score: null,
+      user: {
+        teams: [{ id: teamId, color: '', contestId }],
+      },
+    };
+
+    // startingPositions に含まれているか、または隣接セルを所有しているかチェック
+    const startingCells = (config.startingPositions?.[String(teamId)] || []) as string[];
+    const isStarting = startingCells.includes(cellId);
+
+    // state にセルが存在し、かつ隣接チェックを通るか
+    if (isStarting || engine.getTargetCellId(config, dummySubmission)) {
+      // calculateUpdate のロジックを模倣
+      const isAdjacent = (engine as any).isAdjacentToTeam?.(config, state, cellId, teamId);
+      if (isStarting || isAdjacent) {
+        submittableIds.push(lang.id);
+      }
     }
-    return 'neutral';
-  });
-
-  const ownedIndices: number[] = [];
-  owners.forEach((owner, index) => {
-    if (owner === teamColor) ownedIndices.push(index);
-  });
-
-  const adjacency = buildAdjacency(placements, board.edges);
-
-  const candidateIndices = new Set<number>();
-  for (const idx of ownedIndices) {
-    candidateIndices.add(idx);
-    const neighbors = adjacency.get(idx) ?? [];
-    for (const n of neighbors) candidateIndices.add(n);
   }
 
-  const submittableLanguageIds = new Set<number>();
-  candidateIndices.forEach((index) => {
-    const placement = placements[index];
-    if (!placement) return;
-    const kind: RawCellKind = placement.kind ?? 'PLAYABLE';
-    if (kind !== 'PLAYABLE') return;
-    if (typeof placement.languageId === 'number') submittableLanguageIds.add(placement.languageId);
-  });
-
-  return Array.from(submittableLanguageIds.values()).sort((a, b) => a - b);
+  return submittableIds.sort((a, b) => a - b);
 }

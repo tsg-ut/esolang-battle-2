@@ -22,7 +22,7 @@ export default function TestCaseEdit() {
 
   const { data: allLanguages } = trpc.adminGetLanguages.useQuery();
 
-  const currentValues = Form.useWatch([], form);
+  const currentValues = Form.useWatch([], form) as any;
 
   const isChanged =
     testCase &&
@@ -36,7 +36,7 @@ export default function TestCaseEdit() {
 
   const { selectProps: problemSelectProps } = useSelect({
     resource: 'problems',
-    optionLabel: (item) => `${item.title} (#${item.id})`,
+    optionLabel: (item) => `${(item as any).title} (#${(item as any).id})`,
     optionValue: 'id',
   });
 

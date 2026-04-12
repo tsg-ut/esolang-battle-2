@@ -64,6 +64,12 @@ export const CrossGridBoard: React.FC<CrossGridBoardProps> = ({
                   className={`flex h-16 w-24 cursor-pointer flex-col items-center justify-center border-r border-gray-700 transition-all last:border-r-0 hover:bg-opacity-80`}
                   style={getCellStyle(cell?.ownerTeamId ?? null)}
                   onClick={() => handleCellClick(pId, lId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleCellClick(pId, lId);
+                    }
+                  }}
                 >
                   {cell?.score !== null && <div className="text-xs font-bold">{cell.score}</div>}
                 </div>

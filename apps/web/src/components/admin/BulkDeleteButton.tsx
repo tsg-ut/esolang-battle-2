@@ -17,7 +17,8 @@ export const BulkDeleteButton: React.FC<BulkDeleteButtonProps> = ({
   resource,
   onSuccess,
 }) => {
-  const { mutate, isLoading } = useDeleteMany();
+  const { mutate, mutation } = useDeleteMany();
+  const isPending = (mutation as any).isPending || (mutation as any).isLoading;
 
   if (selectedKeys.length === 0) return null;
 
@@ -40,9 +41,9 @@ export const BulkDeleteButton: React.FC<BulkDeleteButtonProps> = ({
       }}
       okText="Yes"
       cancelText="No"
-      okButtonProps={{ danger: true, loading: isLoading }}
+      okButtonProps={{ danger: true, loading: isPending }}
     >
-      <Button danger icon={<DeleteOutlined />} loading={isLoading}>
+      <Button danger icon={<DeleteOutlined />} loading={isPending}>
         Delete Selected ({selectedKeys.length})
       </Button>
     </Popconfirm>

@@ -145,7 +145,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <ThemedLayout
               Title={({ collapsed }) => <ThemedTitle collapsed={collapsed} text="Admin" />}
             >
-              {children}
+              {children as any}
             </ThemedLayout>
             <RefineKbar />
           </Refine>

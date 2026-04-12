@@ -60,14 +60,7 @@ export default function TestCaseList() {
           dataIndex="problemId"
           title="Problem"
           filterDropdown={(props) => (
-            <FilterDropdown
-              {...props}
-              mapWithFormData={(formData) => ({
-                field: 'problemId',
-                operator: 'eq',
-                value: formData.problemId,
-              })}
-            >
+            <FilterDropdown {...props}>
               <Select
                 style={{ minWidth: 200 }}
                 {...problemSelectProps}

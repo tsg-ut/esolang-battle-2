@@ -13,7 +13,7 @@ export default function BoardList() {
 
   const { selectProps: contestSelectProps } = useSelect({
     resource: 'contests',
-    optionLabel: (item) => `${item.name}(#${item.id})`,
+    optionLabel: (item) => `${(item as any).name}(#${(item as any).id})`,
     optionValue: 'id',
   });
 

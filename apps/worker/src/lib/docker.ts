@@ -92,11 +92,13 @@ async function runExecutionBatch(
     const isTimeout = !!(raceResult && raceResult.timeout);
 
     if (isTimeout) {
-      await container.kill().catch(() => {});
+      await container.kill().catch((err) => console.error('Failed to kill container:', err));
     }
 
     // 4. 回収: コンテナ削除と結果ファイルの読み込み
-    await container.remove({ force: true }).catch(() => {});
+    await container
+      .remove({ force: true })
+      .catch((err) => console.error('Failed to remove container:', err));
 
     const results: Record<number, DockerResult> = {};
     for (const tc of testCases) {
@@ -124,7 +126,9 @@ async function runExecutionBatch(
     }
     return results;
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+    await fs
+      .rm(tmpDir, { recursive: true, force: true })
+      .catch((err) => console.error('Failed to cleanup tmpDir:', err));
   }
 }
 
@@ -200,7 +204,7 @@ export async function runJudgeScript(
     const isTimeout = !!(raceResult && raceResult.timeout);
 
     if (isTimeout) {
-      await container.kill().catch(() => {});
+      await container.kill().catch((err) => console.error('Failed to kill judge container:', err));
     }
 
     // 標準出力を取得
@@ -208,7 +212,9 @@ export async function runJudgeScript(
     // Dockerのログ形式（ヘッダー付き）をデコード
     const output = decodeDockerLogs(logs);
 
-    await container.remove({ force: true }).catch(() => {});
+    await container
+      .remove({ force: true })
+      .catch((err) => console.error('Failed to remove judge container:', err));
 
     if (isTimeout) throw new Error('Judge script timeout');
 
@@ -219,7 +225,9 @@ export async function runJudgeScript(
       throw new Error(`Invalid JSON from judge script: ${output.stderr}`);
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+    await fs
+      .rm(tmpDir, { recursive: true, force: true })
+      .catch((err) => console.error('Failed to remove tmpDir:', err));
   }
 }
 

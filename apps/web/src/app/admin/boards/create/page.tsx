@@ -40,10 +40,10 @@ export default function BoardCreate() {
       <Form
         {...formProps}
         layout="vertical"
-        onFinish={(values) => {
+        onFinish={(values: any) => {
           try {
-            const config = JSON.parse(values.config);
-            const state = JSON.parse(values.state);
+            const config = JSON.parse(values.config as string);
+            const state = JSON.parse(values.state as string);
             formProps.onFinish?.({ ...values, config, state });
           } catch (e) {
             message.error('Invalid JSON');

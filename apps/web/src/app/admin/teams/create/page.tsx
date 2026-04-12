@@ -8,16 +8,13 @@ import { Create, useForm, useSelect } from '@refinedev/antd';
 import { ColorPicker, Form, Input, Select } from 'antd';
 
 export default function TeamCreate() {
-  const [form] = Form.useForm();
-  const { formProps, saveButtonProps } = useForm({
-    form,
-  });
+  const { formProps, saveButtonProps, form } = useForm({});
   const searchParams = useSearchParams();
   const contestId = searchParams.get('contestId');
 
   const { selectProps: contestSelectProps } = useSelect({
     resource: 'contests',
-    optionLabel: (item) => `${item.name}(#${item.id})`,
+    optionLabel: (item) => `${(item as any).name}(#${(item as any).id})`,
     optionValue: 'id',
   });
 

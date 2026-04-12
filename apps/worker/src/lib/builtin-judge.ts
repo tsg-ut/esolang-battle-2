@@ -73,22 +73,32 @@ export function runBuiltinAggregator(
 ): ScoreAggregatorOutput {
   const { results, submission } = input;
 
-  // デフォルト: 全ケースACならコード長をスコアにする
-  // 1つでもAC以外があれば、そのステータス（最初に見つかったもの）を返す
-  const firstNonAC = results.find((r) => r.checkerResult.status !== 'AC');
+  // ステータスの優先順位 (後者ほど優先)
+  const statusPriority = ['AC', 'WA', 'TLE', 'RE', 'WJ'];
 
-  if (firstNonAC) {
+  let finalStatus: any = 'AC';
+  let maxPriority = 0;
+
+  for (const res of results) {
+    const priority = statusPriority.indexOf(res.checkerResult.status);
+    if (priority > maxPriority) {
+      maxPriority = priority;
+      finalStatus = res.checkerResult.status;
+    }
+  }
+
+  // デフォルト: 全ケースACならコード長をスコアにする
+  if (finalStatus === 'AC') {
     return {
-      status: firstNonAC.checkerResult.status,
-      finalScore: null,
-      summaryMessage:
-        firstNonAC.checkerResult.message || `Failed at testcase ${firstNonAC.testCaseId}`,
+      status: 'AC',
+      finalScore: submission.codeLength,
+      summaryMessage: 'All cases passed!',
     };
   }
 
   return {
-    status: 'AC',
-    finalScore: submission.codeLength,
-    summaryMessage: 'All cases passed!',
+    status: finalStatus,
+    finalScore: 0,
+    summaryMessage: `Failed with status ${finalStatus}`,
   };
 }

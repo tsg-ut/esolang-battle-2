@@ -125,19 +125,19 @@ export const trpcDataProvider = (): DataProvider => ({
     const r = resource.toLowerCase();
     switch (r) {
       case 'users':
-        return { data: await client.adminGetUser.query({ id: Number(id) }) };
+        return { data: (await client.adminGetUser.query({ id: Number(id) })) as any };
       case 'contests':
-        return { data: await client.adminGetContest.query({ id: Number(id) }) };
+        return { data: (await client.adminGetContest.query({ id: Number(id) })) as any };
       case 'teams':
-        return { data: await client.adminGetTeam.query({ id: Number(id) }) };
+        return { data: (await client.adminGetTeam.query({ id: Number(id) })) as any };
       case 'languages':
-        return { data: await client.adminGetLanguage.query({ id: Number(id) }) };
+        return { data: (await client.adminGetLanguage.query({ id: Number(id) })) as any };
       case 'problems':
-        return { data: await client.adminGetProblem.query({ id: Number(id) }) };
+        return { data: (await client.adminGetProblem.query({ id: Number(id) })) as any };
       case 'testcases':
-        return { data: await client.adminGetTestCase.query({ id: Number(id) }) };
+        return { data: (await client.adminGetTestCase.query({ id: Number(id) })) as any };
       case 'boards':
-        return { data: await client.adminGetBoard.query({ id: Number(id) }) };
+        return { data: (await client.adminGetBoard.query({ id: Number(id) })) as any };
       default:
         throw new Error(`Unknown resource: ${resource}`);
     }
@@ -145,38 +145,39 @@ export const trpcDataProvider = (): DataProvider => ({
 
   create: async ({ resource, variables }) => {
     const r = resource.toLowerCase();
+    const v = variables as any;
     let data: any;
     switch (r) {
       case 'users':
         data = await client.adminCreateUser.mutate({
-          name: variables.name,
-          password: variables.password,
-          isAdmin: !!variables.isAdmin,
+          name: v.name,
+          password: v.password,
+          isAdmin: !!v.isAdmin,
         });
-        if (variables.teamId) {
+        if (v.teamId) {
           await client.adminUpdateUserTeam.mutate({
             userId: data.id,
-            teamId: Number(variables.teamId),
+            teamId: Number(v.teamId),
           });
         }
         break;
       case 'contests':
-        data = await client.adminUpsertContest.mutate({ id: null, ...variables } as any);
+        data = await client.adminUpsertContest.mutate({ id: null, ...v } as any);
         break;
       case 'teams':
-        data = await client.adminUpsertTeam.mutate({ id: null, ...variables } as any);
+        data = await client.adminUpsertTeam.mutate({ id: null, ...v } as any);
         break;
       case 'languages':
-        data = await client.adminUpsertLanguage.mutate({ id: null, ...variables } as any);
+        data = await client.adminUpsertLanguage.mutate({ id: null, ...v } as any);
         break;
       case 'problems':
-        data = await client.adminUpsertProblem.mutate({ id: null, ...variables } as any);
+        data = await client.adminUpsertProblem.mutate({ id: null, ...v } as any);
         break;
       case 'testcases':
-        data = await client.adminUpsertTestCase.mutate({ id: null, ...variables } as any);
+        data = await client.adminUpsertTestCase.mutate({ id: null, ...v } as any);
         break;
       case 'boards':
-        data = await client.adminUpsertBoard.mutate({ id: null, ...variables } as any);
+        data = await client.adminUpsertBoard.mutate({ id: null, ...v } as any);
         break;
       default:
         throw new Error(`Create not supported for resource: ${resource}`);
@@ -186,41 +187,42 @@ export const trpcDataProvider = (): DataProvider => ({
 
   update: async ({ resource, id, variables }) => {
     const r = resource.toLowerCase();
+    const v = variables as any;
     let data: any;
     switch (r) {
       case 'users':
         // 1. 基本情報の更新
         data = await client.adminUpdateUser.mutate({
           id: Number(id),
-          name: variables.name,
-          isAdmin: variables.isAdmin,
-          password: variables.password || undefined,
+          name: v.name,
+          isAdmin: v.isAdmin,
+          password: v.password || undefined,
         });
         // 2. チーム情報の更新（もし存在すれば）
-        if (variables.teamId !== undefined) {
+        if (v.teamId !== undefined) {
           await client.adminUpdateUserTeam.mutate({
             userId: Number(id),
-            teamId: variables.teamId ? Number(variables.teamId) : null,
+            teamId: v.teamId ? Number(v.teamId) : null,
           });
         }
         break;
       case 'contests':
-        data = await client.adminUpsertContest.mutate({ id: Number(id), ...variables } as any);
+        data = await client.adminUpsertContest.mutate({ id: Number(id), ...v } as any);
         break;
       case 'teams':
-        data = await client.adminUpsertTeam.mutate({ id: Number(id), ...variables } as any);
+        data = await client.adminUpsertTeam.mutate({ id: Number(id), ...v } as any);
         break;
       case 'languages':
-        data = await client.adminUpsertLanguage.mutate({ id: Number(id), ...variables } as any);
+        data = await client.adminUpsertLanguage.mutate({ id: Number(id), ...v } as any);
         break;
       case 'problems':
-        data = await client.adminUpsertProblem.mutate({ id: Number(id), ...variables } as any);
+        data = await client.adminUpsertProblem.mutate({ id: Number(id), ...v } as any);
         break;
       case 'testcases':
-        data = await client.adminUpsertTestCase.mutate({ id: Number(id), ...variables } as any);
+        data = await client.adminUpsertTestCase.mutate({ id: Number(id), ...v } as any);
         break;
       case 'boards':
-        data = await client.adminUpsertBoard.mutate({ id: Number(id), ...variables } as any);
+        data = await client.adminUpsertBoard.mutate({ id: Number(id), ...v } as any);
         break;
       default:
         throw new Error(`Update not supported for resource: ${resource}`);

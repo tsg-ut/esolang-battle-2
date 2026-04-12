@@ -86,7 +86,6 @@ export async function recalculateBoard(prisma: PrismaClient, boardId: number) {
   });
 
   for (const submission of submissions) {
-    if (!submission.score || submission.score <= 0) continue;
     state = engine.calculateUpdate(
       board.config as any,
       state,

@@ -10,16 +10,14 @@ import { App, Button, Form, Input, Space } from 'antd';
 
 export default function BoardEdit() {
   const { message } = App.useApp();
-  const [form] = Form.useForm();
-  const { formProps, saveButtonProps } = useForm({
-    form: form,
+  const { formProps, saveButtonProps, form } = useForm({
     redirect: false,
   });
   const { id } = useParsed();
   const boardId = id ? Number(id) : undefined;
 
   // フォームの変更監視
-  const currentValues = Form.useWatch([], form);
+  const currentValues = Form.useWatch([], form) as any;
 
   // URLのIDから直接ボードデータを取得
   const { data: board, refetch: refetchBoard } = trpc.adminGetBoard.useQuery(
@@ -43,6 +41,8 @@ export default function BoardEdit() {
     (normalizeJson(currentValues.config) !== normalizeJson(board.config) ||
       normalizeJson(currentValues.state) !== normalizeJson(board.state));
 
+  const boardIdStr = board?.id ? String(board.id) : undefined;
+
   useEffect(() => {
     if (board) {
       form.setFieldsValue({
@@ -53,7 +53,7 @@ export default function BoardEdit() {
         state: typeof board.state === 'string' ? board.state : JSON.stringify(board.state, null, 2),
       });
     }
-  }, [board, form]);
+  }, [boardIdStr, form, board]);
 
   const recalculateMutation = trpc.adminRecalculateBoard.useMutation();
 
@@ -73,7 +73,7 @@ export default function BoardEdit() {
       saveButtonProps={{
         ...saveButtonProps,
         disabled: saveButtonProps.disabled || !isChanged,
-        onClick: (e) => {
+        onClick: () => {
           form.submit();
         },
       }}
@@ -98,7 +98,7 @@ export default function BoardEdit() {
         {...formProps}
         form={form}
         layout="vertical"
-        onFinish={(values) => {
+        onFinish={(values: any) => {
           console.log('BoardEdit onFinish called with:', values);
           try {
             const config =

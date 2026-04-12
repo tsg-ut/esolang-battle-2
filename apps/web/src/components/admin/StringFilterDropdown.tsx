@@ -5,7 +5,7 @@ import React from 'react';
 import { FilterDropdown, FilterDropdownProps } from '@refinedev/antd';
 import { Checkbox, Input, Space } from 'antd';
 
-type StringFilterDropdownProps = FilterDropdownProps & {
+type StringFilterDropdownProps = Omit<FilterDropdownProps, 'children'> & {
   placeholder?: string;
 };
 

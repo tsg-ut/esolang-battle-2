@@ -16,7 +16,7 @@ function TestCaseCreateForm() {
 
   const { selectProps: problemSelectProps } = useSelect({
     resource: 'problems',
-    optionLabel: (item) => `${item.title} (#${item.id})`,
+    optionLabel: (item) => `${(item as any).title} (#${(item as any).id})`,
     optionValue: 'id',
     defaultValue: problemIdParam ? Number(problemIdParam) : undefined,
   });

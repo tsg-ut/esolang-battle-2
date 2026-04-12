@@ -71,7 +71,7 @@ export default function NavBar() {
             {me ? (
               <Space>
                 <Avatar size="small" style={{ backgroundColor: '#87d068' }}>
-                  {me.name[0]?.toUpperCase()}
+                  {me.name?.[0]?.toUpperCase()}
                 </Avatar>
                 <span>{me.name}</span>
               </Space>

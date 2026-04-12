@@ -36,7 +36,7 @@ export default function ContestEdit() {
   const contestId = id ? Number(id) : undefined;
 
   // フォームの変更監視
-  const currentValues = Form.useWatch([], form);
+  const currentValues = Form.useWatch([], form) as any;
   const { data: initialContest } = trpc.adminGetContest.useQuery(
     { id: contestId ?? 0 },
     { enabled: !!contestId }
@@ -354,7 +354,7 @@ function BoardSubEdit({ contestId }: { contestId: number }) {
   const [form] = Form.useForm();
 
   // フォームの変更監視
-  const currentValues = Form.useWatch([], form);
+  const currentValues = Form.useWatch([], form) as any;
 
   const normalizeJson = (val: any) => {
     if (!val) return '';
@@ -387,7 +387,7 @@ function BoardSubEdit({ contestId }: { contestId: number }) {
         state: '{}',
       });
     }
-  }, [board, form]);
+  }, [board?.id, form]);
 
   const onFinish = async (values: any) => {
     console.log('onFinish called with:', values);
@@ -495,7 +495,9 @@ function ProblemSubList({ contestId }: { contestId: number }) {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const { tableProps } = useTable({
     resource: 'problems',
-    permanentFilter: [{ field: 'contestId', operator: 'eq', value: contestId }],
+    filters: {
+      permanent: [{ field: 'contestId', operator: 'eq', value: contestId }],
+    },
     pagination: { mode: 'off' },
   });
 
@@ -550,7 +552,9 @@ function TeamSubList({ contestId }: { contestId: number }) {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const { tableProps } = useTable({
     resource: 'teams',
-    permanentFilter: [{ field: 'contestId', operator: 'eq', value: contestId }],
+    filters: {
+      permanent: [{ field: 'contestId', operator: 'eq', value: contestId }],
+    },
     pagination: { mode: 'off' },
   });
 

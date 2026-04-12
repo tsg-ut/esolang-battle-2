@@ -57,6 +57,12 @@ export const GridBoard: React.FC<GridBoardProps> = ({ config, state, contestId, 
             className={`flex items-center justify-center rounded-md p-2 transition-all hover:-translate-y-0.5 ${info.languageId !== undefined ? 'cursor-pointer' : ''}`}
             style={getCellStyle(cell?.ownerTeamId ?? null)}
             onClick={() => handleCellClick(info.languageId)}
+            onKeyDown={(e) => {
+              if (info.languageId !== undefined && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                handleCellClick(info.languageId);
+              }
+            }}
           >
             <div className="flex flex-col items-center justify-center text-center">
               <div className="text-sm font-extrabold leading-tight">{info.label}</div>

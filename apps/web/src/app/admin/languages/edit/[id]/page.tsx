@@ -18,7 +18,7 @@ export default function LanguageEdit() {
     { enabled: !!languageId }
   );
 
-  const currentValues = Form.useWatch([], form);
+  const currentValues = Form.useWatch([], form) as any;
 
   const isChanged =
     language &&

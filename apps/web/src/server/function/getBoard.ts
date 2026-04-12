@@ -12,7 +12,7 @@ export async function getBoard(prisma: PrismaClient, contestId: number): Promise
     id: board.id,
     contestId: board.contestId,
     type: board.type as BoardType,
-    config: board.config,
+    config: board.config as any,
     state: board.state as any,
     lastUpdated: board.lastUpdated.toISOString(),
   };

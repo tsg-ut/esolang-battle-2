@@ -18,7 +18,7 @@ export default function ProblemEdit() {
   });
 
   // フォームの変更監視
-  const currentValues = Form.useWatch([], form);
+  const currentValues = Form.useWatch([], form) as any;
 
   const router = useRouter();
   const pathname = usePathname();
@@ -110,7 +110,7 @@ export default function ProblemEdit() {
 
   const { selectProps: contestSelectProps } = useSelect({
     resource: 'contests',
-    optionLabel: (item) => `${item.name}(#${item.id})`,
+    optionLabel: (item) => `${(item as any).name}(#${(item as any).id})`,
     optionValue: 'id',
   });
 
@@ -144,7 +144,7 @@ export default function ProblemEdit() {
         {...formProps}
         form={form}
         layout="vertical"
-        onFinish={(values) => {
+        onFinish={(values: any) => {
           try {
             const formattedValues = {
               ...values,
@@ -356,7 +356,9 @@ function TestCasesSubList({ problemId }: { problemId: number }) {
 
   const { tableProps } = useTable({
     resource: 'testcases',
-    permanentFilter: [{ field: 'problemId', operator: 'eq', value: problemId }],
+    filters: {
+      permanent: [{ field: 'problemId', operator: 'eq', value: problemId }],
+    },
     pagination: { mode: 'off' },
   });
 

@@ -30,7 +30,7 @@ export default function UserEdit() {
     }
   }, [user, initialTeamId, form]);
 
-  const currentValues = Form.useWatch([], form);
+  const currentValues = Form.useWatch([], form) as any;
 
   const isChanged =
     user &&
@@ -43,7 +43,8 @@ export default function UserEdit() {
   // For team selection
   const { selectProps: teamSelectProps } = useSelect({
     resource: 'teams',
-    optionLabel: (item) => `C#${item.contestId}: ${item.name || item.color} (#${item.id})`,
+    optionLabel: (item) =>
+      `C#${(item as any).contestId}: ${(item as any).name || (item as any).color} (#${(item as any).id})`,
     optionValue: 'id',
   });
 

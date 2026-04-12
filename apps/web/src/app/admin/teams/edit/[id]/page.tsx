@@ -15,7 +15,7 @@ export default function TeamEdit() {
 
   const { data: team } = trpc.adminGetTeam.useQuery({ id: teamId ?? 0 }, { enabled: !!teamId });
 
-  const currentValues = Form.useWatch([], form);
+  const currentValues = Form.useWatch([], form) as any;
   const initialData = team;
 
   const isChanged =
@@ -27,7 +27,7 @@ export default function TeamEdit() {
 
   const { selectProps: contestSelectProps } = useSelect({
     resource: 'contests',
-    optionLabel: (item) => `${item.name}(#${item.id})`,
+    optionLabel: (item) => `${(item as any).name}(#${(item as any).id})`,
     optionValue: 'id',
   });
 

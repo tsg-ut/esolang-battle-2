@@ -25,7 +25,7 @@ export default function ProblemList() {
 
   const { selectProps: contestSelectProps } = useSelect({
     resource: 'contests',
-    optionLabel: (item) => `${item.name}(#${item.id})`,
+    optionLabel: (item) => `${(item as any).name}(#${(item as any).id})`,
     optionValue: 'id',
   });
 
@@ -66,14 +66,7 @@ export default function ProblemList() {
           sorter
           render={(contestId, record: any) => `${record.contestName || 'Unknown'}(#${contestId})`}
           filterDropdown={(props) => (
-            <FilterDropdown
-              {...props}
-              mapWithFormData={(formData) => ({
-                field: 'contestId',
-                operator: 'eq',
-                value: formData.contestId,
-              })}
-            >
+            <FilterDropdown {...props}>
               <Select
                 {...contestSelectProps}
                 style={{ minWidth: 200 }}
