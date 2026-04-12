@@ -16,7 +16,6 @@ import {
   deleteProblem,
   deleteTestCase,
   findTestCasesByProblemId,
-  recalculateBoard,
   updateTeam,
   upsertTestCase,
 } from '@esolang-battle/db';
@@ -392,7 +391,8 @@ export const adminRouter = router({
   adminRecalculateBoard: adminProcedure
     .input(z.object({ boardId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      return await recalculateBoard(ctx.prisma, input.boardId);
+      const { recalculateBoardAction } = await import('../function/board');
+      return await recalculateBoardAction(ctx.prisma, input.boardId);
     }),
 
   // Submissions

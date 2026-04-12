@@ -1,6 +1,6 @@
 import { Job, Worker } from 'bullmq';
 import 'dotenv/config';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 
 import { processSubmission } from './jobs/submission';
 import { TestJobData, processTest } from './jobs/test';

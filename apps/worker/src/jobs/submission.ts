@@ -1,8 +1,9 @@
 import { CaseCheckerInput, CaseCheckerOutput, ScoreAggregatorInput } from '@esolang-battle/common';
-import { prisma, updateBoardFromSubmission } from '@esolang-battle/db';
+import { prisma } from '@esolang-battle/db';
 
 import { runBuiltinAggregator, runBuiltinChecker } from '../lib/builtin-judge';
 import { runAllTestCasesInSingleContainer, runJudgeScript } from '../lib/docker';
+import { updateBoardFromSubmission } from '../lib/board';
 
 export async function processSubmission(submissionId: number) {
   const submission = await prisma.submission.findUnique({
@@ -241,7 +242,7 @@ export async function processSubmission(submissionId: number) {
     });
     if (board) {
       try {
-        await updateBoardFromSubmission(prisma, board.id, submission.id);
+        await updateBoardFromSubmission(board.id, submission.id);
       } catch (error) {
         console.error('Failed to update board:', error);
       }

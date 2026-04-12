@@ -57,4 +57,16 @@ export abstract class BaseBoardEngine<
   }
 
   abstract createInitialState(config: TConfig): BoardState;
+
+  recalculate(
+    config: TConfig,
+    initialState: BoardState,
+    submissions: BoardSubmission[]
+  ): BoardState {
+    let state = initialState;
+    for (const submission of submissions) {
+      state = this.calculateUpdate(config, state, submission);
+    }
+    return state;
+  }
 }

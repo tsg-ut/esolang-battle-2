@@ -1,5 +1,5 @@
 import { BoardSubmission, getBoardEngine } from '@esolang-battle/common';
-import { PrismaClient, findBoardByContestId } from '@esolang-battle/db';
+import { findBoardByContestId, PrismaClient } from '@esolang-battle/db';
 
 /**
  * チームが現在提出可能な言語IDの一覧を取得する

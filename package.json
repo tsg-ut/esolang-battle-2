@@ -8,7 +8,11 @@
   "scripts": {
     "dev:web": "npm run dev -w apps/web",
     "dev:worker": "npm run dev -w apps/worker",
-    "build": "npm run build --workspaces",
+    "start:worker": "npm run start -w apps/worker",
+    "build": "npm run build:common && npm run build:db && npm run build:apps",
+    "build:common": "npm run build -w packages/common",
+    "build:db": "npm run build -w packages/db",
+    "build:apps": "npm run build -w apps/web && npm run build -w apps/worker",
     "generate": "npm run generate -w packages/db",
     "migrate": "npm run migrate -w packages/db",
     "studio": "npm run studio -w packages/db",
