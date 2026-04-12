@@ -3,7 +3,7 @@ import { prisma } from '@esolang-battle/db';
 
 import { runBuiltinAggregator, runBuiltinChecker } from '../lib/builtin-judge';
 import { runAllTestCasesInSingleContainer, runJudgeScript } from '../lib/docker';
-import { updateBoardFromSubmission } from '../lib/board';
+import { boardUpdateQueue } from '../queue.js';
 
 export async function processSubmission(submissionId: number) {
   const submission = await prisma.submission.findUnique({
@@ -38,7 +38,7 @@ export async function processSubmission(submissionId: number) {
   const dockerResults = await runAllTestCasesInSingleContainer(
     image,
     submission.code,
-    problem.testCases.map((tc) => ({ id: tc.id, input: tc.input }))
+    problem.testCases.map((tc: any) => ({ id: tc.id, input: tc.input }))
   );
 
   // 2. 個別ケースの判定 (Case Checking)
@@ -53,8 +53,8 @@ export async function processSubmission(submissionId: number) {
     where: {
       id: {
         in: problem.testCases
-          .map((tc) => tc.checkerLanguageId)
-          .filter((id) => id !== null) as number[],
+          .map((tc: any) => tc.checkerLanguageId)
+          .filter((id: any) => id !== null) as number[],
       },
     },
   });
@@ -75,7 +75,7 @@ export async function processSubmission(submissionId: number) {
     // 判定ロジックの決定: TC固有スクリプト > Problemカスタムスクリプト > Problem組み込み
     if (testcase.checkerScript && testcase.checkerLanguageId) {
       // TestCase 固有のカスタムチェッカー
-      const lang = tcLanguages.find((l) => l.id === testcase.checkerLanguageId);
+      const lang = tcLanguages.find((l: any) => l.id === testcase.checkerLanguageId);
       if (lang) {
         try {
           const input: CaseCheckerInput = {
@@ -232,21 +232,11 @@ export async function processSubmission(submissionId: number) {
     },
   });
 
-  // 4. スコアが有効（正解）なら盤面を更新
-  if (
-    finalResult.status === 'AC' &&
-    finalResult.finalScore !== null &&
-    finalResult.finalScore > 0
-  ) {
-    const board = await prisma.board.findUnique({
-      where: { contestId: problem.contestId },
-    });
-    if (board) {
-      try {
-        await updateBoardFromSubmission(board.id, submission.id);
-      } catch (error) {
-        console.error('Failed to update board:', error);
-      }
-    }
+  // 4. ボード更新ジョブをキューに積む
+  const board = await prisma.board.findUnique({
+    where: { contestId: problem.contestId },
+  });
+  if (board) {
+    await boardUpdateQueue.add('sync', { boardId: board.id });
   }
 }

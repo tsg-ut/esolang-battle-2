@@ -175,3 +175,4 @@ export type ScoreAggregatorOutput = {
 };
 
 export * from './board';
+export * from './config';
