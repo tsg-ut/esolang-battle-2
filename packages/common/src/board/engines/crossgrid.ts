@@ -3,45 +3,93 @@ import { BaseBoardEngine } from './base';
 
 export class CrossGridBoardEngine extends BaseBoardEngine<CrossGridBoardConfig> {
   getTargetCellId(config: CrossGridBoardConfig, submission: BoardSubmission): string | null {
-    return `p_${submission.problemId}_l_${submission.languageId}`;
+    // CrossGrid では problemId と languageId の組み合わせがセルになる
+    // ID 形式: p_{problemId}_l_{languageId}
+    if (
+      config.problemIds.includes(submission.problemId) &&
+      config.languageIds.includes(submission.languageId)
+    ) {
+      return `p_${submission.problemId}_l_${submission.languageId}`;
+    }
+    return null;
   }
 
-  getAdjacentCellIds(config: CrossGridBoardConfig, cellId: string): string[] {
-    const parts = cellId.split('_');
-    const pId = parseInt(parts[1], 10);
-    const lId = parseInt(parts[3], 10);
+  getAdjacentCellIds(_config: CrossGridBoardConfig, _cellId: string): string[] {
+    // CrossGrid は隣接ルールがない（すべてのセルが独立して占領可能）ため、常に空
+    return [];
+  }
 
-    const { problemIds, languageIds } = config;
-    const pIdx = problemIds.indexOf(pId);
-    const lIdx = languageIds.indexOf(lId);
+  // CrossGrid 特有のオーバーライド: 隣接チェックをスキップして常に占領可能にする
+  calculateUpdate(
+    config: CrossGridBoardConfig,
+    state: BoardState,
+    submission: BoardSubmission,
+    scoreOrder: 'ASC' | 'DESC'
+  ): BoardState {
+    const targetCellId = this.getTargetCellId(config, submission);
+    if (!targetCellId || !state[targetCellId]) return state;
 
-    if (pIdx === -1 || lIdx === -1) return [];
+    const cell = state[targetCellId];
+    const team = submission.user.teams[0];
+    if (!team) return state;
 
-    const adj: string[] = [];
-    if (pIdx > 0) adj.push(`p_${problemIds[pIdx - 1]}_l_${lId}`);
-    if (pIdx < problemIds.length - 1) adj.push(`p_${problemIds[pIdx + 1]}_l_${lId}`);
-    if (lIdx > 0) adj.push(`p_${pId}_l_${languageIds[lIdx - 1]}`);
-    if (lIdx < languageIds.length - 1) adj.push(`p_${pId}_l_${languageIds[lIdx + 1]}`);
+    const subScore = submission.score ?? 0;
+    const allowMultiOwner = config.allowMultiOwner ?? false;
 
-    return adj;
+    let shouldReplaceOwners = false;
+    let isSameScore = false;
+
+    if (cell.score === null) {
+      shouldReplaceOwners = true;
+    } else {
+      if (scoreOrder === 'ASC') {
+        if (subScore < cell.score) shouldReplaceOwners = true;
+        else if (subScore === cell.score) isSameScore = true;
+      } else {
+        if (subScore > cell.score) shouldReplaceOwners = true;
+        else if (subScore === cell.score) isSameScore = true;
+      }
+    }
+
+    // CrossGrid は隣接チェックなしでスコア条件のみで更新
+    if (shouldReplaceOwners) {
+      return {
+        ...state,
+        [targetCellId]: {
+          ownerTeamIds: [team.id],
+          score: subScore,
+          submissionId: submission.id,
+        },
+      };
+    } else if (isSameScore && allowMultiOwner) {
+      if (!cell.ownerTeamIds.includes(team.id)) {
+        return {
+          ...state,
+          [targetCellId]: {
+            ...cell,
+            ownerTeamIds: [...cell.ownerTeamIds, team.id].sort(),
+          },
+        };
+      }
+    }
+
+    return state;
   }
 
   createInitialState(config: CrossGridBoardConfig): BoardState {
     const state: BoardState = {};
-    const { problemIds, languageIds } = config;
-    for (const pId of problemIds) {
-      for (const lId of languageIds) {
-        state[`p_${pId}_l_${lId}`] = { ownerTeamId: null, score: null, submissionId: null };
+    for (const pid of config.problemIds) {
+      for (const lid of config.languageIds) {
+        state[`p_${pid}_l_${lid}`] = { ownerTeamIds: [], score: null, submissionId: null };
       }
     }
 
-    // Apply starting positions
     if (config.startingPositions) {
-      for (const [teamIdStr, ids] of Object.entries(config.startingPositions)) {
+      for (const [teamIdStr, cellIds] of Object.entries(config.startingPositions)) {
         const teamId = parseInt(teamIdStr, 10);
-        for (const cellId of ids as string[]) {
+        for (const cellId of cellIds as string[]) {
           if (state[cellId]) {
-            state[cellId] = { ownerTeamId: teamId, score: null, submissionId: null };
+            state[cellId] = { ownerTeamIds: [teamId], score: null, submissionId: null };
           }
         }
       }

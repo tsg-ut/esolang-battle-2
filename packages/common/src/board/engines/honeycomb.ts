@@ -9,32 +9,43 @@ export class HoneycombBoardEngine extends BaseBoardEngine<HoneycombBoardConfig> 
   getAdjacentCellIds(config: HoneycombBoardConfig, cellId: string): string[] {
     const info = config.cellInfo[cellId];
     if (!info) return [];
+
     const { q, r } = info;
-    const neighbors = [
-      [q + 1, r],
-      [q + 1, r - 1],
-      [q, r - 1],
-      [q - 1, r],
-      [q - 1, r + 1],
-      [q, r + 1],
+    const directions = [
+      [1, 0],
+      [1, -1],
+      [0, -1],
+      [-1, 0],
+      [-1, 1],
+      [0, 1],
     ];
-    return neighbors.map(([nq, nr]) => `${nq}_${nr}`);
+
+    const adjacentIds: string[] = [];
+    for (const [dq, dr] of directions) {
+      const targetQ = q + dq;
+      const targetR = r + dr;
+      // cellInfo を走査して一致する q, r を探す (非効率だが、configの構造上やむなし)
+      const adjId = Object.keys(config.cellInfo).find((id) => {
+        const c = config.cellInfo[id];
+        return c.q === targetQ && c.r === targetR;
+      });
+      if (adjId) adjacentIds.push(adjId);
+    }
+    return adjacentIds;
   }
 
   createInitialState(config: HoneycombBoardConfig): BoardState {
     const state: BoardState = {};
-    const cellIds = config.cellIds || [];
-    for (const cellId of cellIds) {
-      state[cellId] = { ownerTeamId: null, score: null, submissionId: null };
+    for (const id of config.cellIds) {
+      state[id] = { ownerTeamIds: [], score: null, submissionId: null };
     }
 
-    // Apply starting positions
     if (config.startingPositions) {
-      for (const [teamIdStr, ids] of Object.entries(config.startingPositions)) {
+      for (const [teamIdStr, cellIds] of Object.entries(config.startingPositions)) {
         const teamId = parseInt(teamIdStr, 10);
-        for (const cellId of ids as string[]) {
+        for (const cellId of cellIds as string[]) {
           if (state[cellId]) {
-            state[cellId] = { ownerTeamId: teamId, score: null, submissionId: null };
+            state[cellId] = { ownerTeamIds: [teamId], score: null, submissionId: null };
           }
         }
       }

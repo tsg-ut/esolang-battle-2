@@ -27,22 +27,12 @@ export const GridBoard: React.FC<GridBoardProps> = ({
   const teamStats = useMemo(() => {
     const counts: Record<number, number> = {};
     Object.values(state).forEach((cell) => {
-      if (cell.ownerTeamId !== null) {
-        counts[cell.ownerTeamId] = (counts[cell.ownerTeamId] || 0) + 1;
-      }
-    });
-    if (config.startingPositions) {
-      Object.entries(config.startingPositions).forEach(([teamIdStr, cellIds]) => {
-        const teamId = Number(teamIdStr);
-        cellIds.forEach((cellId) => {
-          if (!state[cellId]) {
-            counts[teamId] = (counts[teamId] || 0) + 1;
-          }
-        });
+      cell.ownerTeamIds.forEach((teamId) => {
+        counts[teamId] = (counts[teamId] || 0) + 1;
       });
-    }
+    });
     return counts;
-  }, [state, config.startingPositions]);
+  }, [state]);
 
   const handleCellClick = (languageId?: number) => {
     if (languageId !== undefined) {
@@ -50,15 +40,35 @@ export const GridBoard: React.FC<GridBoardProps> = ({
     }
   };
 
-  const getCellStyle = (ownerTeamId: number | null): React.CSSProperties => {
-    if (ownerTeamId === null) return { backgroundColor: '#eee', color: '#666' };
-    const color = teamColors[ownerTeamId] || '#4b5563';
-    return { backgroundColor: color, color: '#fff' };
+  const getCellStyle = (cell?: any): React.CSSProperties => {
+    const owners = cell?.ownerTeamIds || [];
+
+    if (owners.length === 0) return { backgroundColor: '#eee', color: '#666' };
+
+    if (owners.length === 1) {
+      const color = teamColors[owners[0]] || '#4b5563';
+      return { backgroundColor: color, color: '#fff' };
+    }
+
+    // 複数所有されている場合はグラデーション（ストライプ）にする
+    const colors = owners.map((id: number) => teamColors[id] || '#4b5563');
+    const stripeWidth = 100 / colors.length;
+    const gradient = colors
+      .map(
+        (color: string, i: number) =>
+          `${color} ${i * stripeWidth}%, ${color} ${(i + 1) * stripeWidth}%`
+      )
+      .join(', ');
+
+    return {
+      background: `linear-gradient(135deg, ${gradient})`,
+      color: '#fff',
+      textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+    };
   };
 
   return (
     <div className="flex h-full max-h-full w-full max-w-full flex-col items-center gap-6 py-4">
-      {/* 盤面エリア: flex-1 で可能な限り広がる */}
       <div className="flex min-h-0 w-full flex-1 items-center justify-center">
         <div
           className="grid h-auto max-h-full w-auto max-w-full gap-2"
@@ -82,8 +92,8 @@ export const GridBoard: React.FC<GridBoardProps> = ({
                 key={cellId}
                 role={info.languageId !== undefined ? 'button' : undefined}
                 tabIndex={info.languageId !== undefined ? 0 : undefined}
-                className={`flex items-center justify-center rounded shadow-md transition-all hover:scale-105 ${info.languageId !== undefined ? 'cursor-pointer' : ''}`}
-                style={getCellStyle(cell?.ownerTeamId ?? null)}
+                className={`flex items-center justify-center rounded shadow-sm transition-all hover:scale-105 ${info.languageId !== undefined ? 'cursor-pointer' : ''}`}
+                style={getCellStyle(cell)}
                 onClick={() => handleCellClick(info.languageId)}
                 onKeyDown={(e) => {
                   if (info.languageId !== undefined && (e.key === 'Enter' || e.key === ' ')) {
@@ -108,7 +118,6 @@ export const GridBoard: React.FC<GridBoardProps> = ({
         </div>
       </div>
 
-      {/* チームの戦況表示: 盤面のすぐ下に配置 */}
       {teams && teams.length > 0 && (
         <div className="flex shrink-0 items-center justify-center gap-6 rounded-xl border border-gray-100 bg-white px-8 py-3 shadow-lg">
           {teams.map((team, idx) => (

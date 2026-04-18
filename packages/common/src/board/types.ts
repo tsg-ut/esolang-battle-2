@@ -4,7 +4,7 @@ export const BoardType = z.enum(['GRID', 'HONEYCOMB', 'CROSS_GRID']);
 export type BoardType = z.infer<typeof BoardType>;
 
 export const BoardCellSchema = z.object({
-  ownerTeamId: z.number().nullable(),
+  ownerTeamIds: z.array(z.number()),
   score: z.number().nullable(),
   submissionId: z.number().nullable(),
 });
@@ -26,6 +26,7 @@ export const GridBoardConfigSchema = z.object({
     })
   ),
   startingPositions: z.record(z.string(), z.array(z.string())).optional(), // teamId -> ["x_y"]
+  allowMultiOwner: z.boolean().optional(),
 });
 export type GridBoardConfig = z.infer<typeof GridBoardConfigSchema>;
 
@@ -44,6 +45,7 @@ export const HoneycombBoardConfigSchema = z.object({
   mapping: z.record(z.string(), z.string()), // languageId -> "q_r"
   startingPositions: z.record(z.string(), z.array(z.string())).optional(),
   size: z.number().optional(),
+  allowMultiOwner: z.boolean().optional(),
 });
 export type HoneycombBoardConfig = z.infer<typeof HoneycombBoardConfigSchema>;
 
@@ -54,6 +56,7 @@ export const CrossGridBoardConfigSchema = z.object({
   problemInfo: z.record(z.string(), z.string()), // problemId -> title
   languageInfo: z.record(z.string(), z.string()), // languageId -> name
   startingPositions: z.record(z.string(), z.array(z.string())).optional(), // teamId -> ["p_1_l_1"]
+  allowMultiOwner: z.boolean().optional(),
 });
 export type CrossGridBoardConfig = z.infer<typeof CrossGridBoardConfigSchema>;
 

@@ -26,13 +26,27 @@ export abstract class BaseBoardEngine<
     }
 
     const subScore = submission.score ?? 0;
+    const allowMultiOwner = (config as any).allowMultiOwner ?? false;
 
-    // スコア比較ロジック: すでにより良いスコアがある場合は更新しない
-    if (cell.score !== null) {
+    let shouldReplaceOwners = false;
+    let isSameScore = false;
+
+    // スコア比較ロジック
+    if (cell.score === null) {
+      shouldReplaceOwners = true;
+    } else {
       if (scoreOrder === 'ASC') {
-        if (subScore >= cell.score) return state;
+        if (subScore < cell.score) {
+          shouldReplaceOwners = true;
+        } else if (subScore === cell.score) {
+          isSameScore = true;
+        }
       } else {
-        if (subScore <= cell.score) return state;
+        if (subScore > cell.score) {
+          shouldReplaceOwners = true;
+        } else if (subScore === cell.score) {
+          isSameScore = true;
+        }
       }
     }
 
@@ -40,14 +54,28 @@ export abstract class BaseBoardEngine<
     const isStartingCell = this.isStartingCell(config, targetCellId, team.id);
 
     if (isAdjacentToOwned || isStartingCell) {
-      return {
-        ...state,
-        [targetCellId]: {
-          ownerTeamId: team.id,
-          score: subScore,
-          submissionId: submission.id,
-        },
-      };
+      if (shouldReplaceOwners) {
+        // 新しい単独所有者
+        return {
+          ...state,
+          [targetCellId]: {
+            ownerTeamIds: [team.id],
+            score: subScore,
+            submissionId: submission.id,
+          },
+        };
+      } else if (isSameScore && allowMultiOwner) {
+        // 同じスコアで複数所有を許可する場合
+        if (!cell.ownerTeamIds.includes(team.id)) {
+          return {
+            ...state,
+            [targetCellId]: {
+              ...cell,
+              ownerTeamIds: [...cell.ownerTeamIds, team.id].sort(),
+            },
+          };
+        }
+      }
     }
 
     return state;
@@ -60,7 +88,11 @@ export abstract class BaseBoardEngine<
     teamId: number
   ): boolean {
     const adjacents = this.getAdjacentCellIds(config, targetCellId);
-    return adjacents.some((id) => state[id]?.ownerTeamId === teamId);
+    return adjacents.some((id) => {
+      const cell = state[id];
+      if (!cell) return false;
+      return cell.ownerTeamIds.includes(teamId);
+    });
   }
 
   protected isStartingCell(config: TConfig, cellId: string, teamId: number): boolean {
