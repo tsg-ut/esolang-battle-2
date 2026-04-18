@@ -1,10 +1,10 @@
 import { Job, Worker } from 'bullmq';
 import 'dotenv/config';
 
-import { syncBoardWithSubmissions } from './jobs/board.js';
-import { processSubmission } from './jobs/submission.js';
-import { TestJobData, processTest } from './jobs/test.js';
-import { connection } from './queue.js';
+import { syncBoardWithSubmissions } from './jobs/board';
+import { processSubmission } from './jobs/submission';
+import { TestJobData, processTest } from './jobs/test';
+import { connection } from './queue';
 
 // --- Types ---
 type SubmissionJobData = {

@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx -r dotenv/config src/index.ts",
-    "build": "tsc",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --packages=external --alias:@esolang-battle/db=../../packages/db/src/index.ts --alias:@esolang-battle/common=../../packages/common/src/index.ts --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --outfile=dist/index.js",
+    "check:types": "tsc --noEmit",
     "start": "node -r dotenv/config dist/index.js"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@types/dockerode": "^4.0.1",
     "@types/node": "^25.5.0",
+    "esbuild": "^0.27.4",
     "prisma": "^6.19.3",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
