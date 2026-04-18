@@ -1,6 +1,7 @@
 {
   "name": "esolang-battle-2-monorepo",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev:web": "pnpm --filter @esolang-battle/web run dev",
     "dev:worker": "pnpm --filter @esolang-battle/worker run dev",
@@ -32,6 +33,7 @@
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "prisma": "^7.7.0",
+    "turbo": "^2.9.6",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.58.2"
   },
