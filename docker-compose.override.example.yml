@@ -1,0 +1,24 @@
+# ------------------------------------------------------------------------------
+# Local Development Overrides
+# ------------------------------------------------------------------------------
+# 1. このファイルをコピーして `docker-compose.override.yml` を作成してください。
+#    cp docker-compose.override.example.yml docker-compose.override.yml
+# 2. `docker compose up` を実行すると、自動的にこの設定が読み込まれ、
+#    DB や Redis のポートがホスト側に公開されます。
+# ------------------------------------------------------------------------------
+
+services:
+  db:
+    # ローカルの GUI ツール（TablePlus, DBeaver等）から接続可能にします
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    # Redis Insight 等で接続可能にします
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  web:
+    environment:
+      # 開発時はホットリロードを有効にするなどの指定（必要に応じて）
+      NODE_ENV: development

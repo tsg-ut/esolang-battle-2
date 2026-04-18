@@ -3,11 +3,19 @@
  */
 
 // Redis Connection Settings
+const getRedisUrl = () => {
+  if (typeof (globalThis as any).process !== 'undefined') {
+    const process = (globalThis as any).process;
+    if (process.env.REDIS_URL) return process.env.REDIS_URL;
+    const host = process.env.REDIS_HOST || 'localhost';
+    const port = process.env.REDIS_PORT || '6379';
+    return `redis://${host}:${port}`;
+  }
+  return 'redis://localhost:6379';
+};
+
 export const REDIS_CONFIG = {
-  url:
-    typeof (globalThis as any).process !== 'undefined'
-      ? (globalThis as any).process.env.REDIS_URL || 'redis://localhost:6379'
-      : 'redis://localhost:6379',
+  url: getRedisUrl(),
   options: {
     maxRetriesPerRequest: null, // Required by BullMQ
   },
