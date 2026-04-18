@@ -260,7 +260,7 @@ export default function BoardDocsPage() {
       <div className="mb-8 rounded-lg border border-blue-100 bg-blue-50 p-4 shadow-sm">
         <Text strong>Note on allowMultiOwner:</Text>
         <br />
-        <Paragraph className="mb-0 mt-2">
+        <Paragraph className="mt-2 mb-0">
           このオプションが有効な場合、既に占有されているセルに対して、現在のベストスコアと
           <b>全く同じ</b>スコアの提出があると、そのチームも所有者に追加されます。
           より良いスコアが記録された瞬間、所有者は新しい記録を出したチーム単独にリセットされます。

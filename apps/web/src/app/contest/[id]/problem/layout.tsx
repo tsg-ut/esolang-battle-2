@@ -24,7 +24,7 @@ export default function ProblemLayout({ children }: { children: React.ReactNode 
         <nav className="-mb-px flex space-x-8 overflow-x-auto">
           <button
             onClick={() => router.push(`/contest/${contestId}/problem`)}
-            className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors ${
+            className={`border-b-2 px-1 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
               isListPage
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
@@ -39,7 +39,7 @@ export default function ProblemLayout({ children }: { children: React.ReactNode 
               <button
                 key={p.id}
                 onClick={() => router.push(problemUrl)}
-                className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors ${
+                className={`border-b-2 px-1 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'

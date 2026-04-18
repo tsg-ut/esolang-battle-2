@@ -58,7 +58,7 @@ export default function LanguageDetailPage() {
                 Documentation / Description
               </Title>
               <div className="prose max-w-none rounded-lg bg-gray-50 p-6">
-                <Paragraph className="whitespace-pre-wrap leading-relaxed">
+                <Paragraph className="leading-relaxed whitespace-pre-wrap">
                   {lang.description}
                 </Paragraph>
               </div>

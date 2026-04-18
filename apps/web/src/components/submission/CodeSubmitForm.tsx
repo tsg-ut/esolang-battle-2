@@ -147,7 +147,7 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
           value={isBase64 ? '[File Content Loaded]' : code}
           onChange={handleCodeChange}
           disabled={isBase64}
-          className={`block w-full rounded-lg border border-gray-300 px-4 py-3 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 ${isBase64 ? 'bg-gray-100 text-gray-500' : 'bg-gray-50'} ${isTooLarge ? 'border-red-500 ring-red-500' : ''}`}
+          className={`block w-full rounded-lg border border-gray-300 px-4 py-3 font-mono text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none ${isBase64 ? 'bg-gray-100 text-gray-500' : 'bg-gray-50'} ${isTooLarge ? 'border-red-500 ring-red-500' : ''}`}
           placeholder="ここにコードを入力、またはファイルをアップロード..."
         />
         <div className="mt-2 flex justify-end gap-4 text-xs text-gray-500">

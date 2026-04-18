@@ -128,7 +128,7 @@ export default function CodeTestPage() {
                   rows={4}
                   value={stdinText}
                   onChange={(e) => setStdinText(e.target.value)}
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none sm:text-sm"
                   placeholder="標準入力として与えたい文字列を入力..."
                 />
               </div>
@@ -155,7 +155,7 @@ export default function CodeTestPage() {
 
               <div className="grid max-w-sm grid-cols-2 gap-4">
                 <div className="rounded-md bg-gray-100 p-3">
-                  <span className="mb-1 block text-xs font-bold uppercase text-gray-500">
+                  <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">
                     Exit Code
                   </span>
                   <span
@@ -165,7 +165,7 @@ export default function CodeTestPage() {
                   </span>
                 </div>
                 <div className="rounded-md bg-gray-100 p-3">
-                  <span className="mb-1 block text-xs font-bold uppercase text-gray-500">
+                  <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">
                     Duration
                   </span>
                   <span className="font-mono font-bold text-gray-800">
@@ -177,19 +177,19 @@ export default function CodeTestPage() {
 
               <div className="space-y-4">
                 <div>
-                  <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-700">
+                  <h4 className="mb-2 text-sm font-semibold tracking-wider text-gray-700 uppercase">
                     stdout
                   </h4>
                   <pre className="min-h-[4rem] overflow-x-auto rounded-lg bg-gray-900 p-4 font-mono text-sm text-gray-100">
-                    {displayResult.stdout || <span className="italic text-gray-500">(empty)</span>}
+                    {displayResult.stdout || <span className="text-gray-500 italic">(empty)</span>}
                   </pre>
                 </div>
                 <div>
-                  <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-700">
+                  <h4 className="mb-2 text-sm font-semibold tracking-wider text-gray-700 uppercase">
                     stderr
                   </h4>
                   <pre className="min-h-[4rem] overflow-x-auto rounded-lg bg-gray-900 p-4 font-mono text-sm text-red-400">
-                    {displayResult.stderr || <span className="italic text-gray-500">(empty)</span>}
+                    {displayResult.stderr || <span className="text-gray-500 italic">(empty)</span>}
                   </pre>
                 </div>
               </div>

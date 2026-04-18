@@ -74,21 +74,21 @@ export default function SubmissionDetailPage() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <span className="mb-1 block text-xs font-bold uppercase text-gray-500">問題</span>
+          <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">問題</span>
           <span className="text-lg font-medium">{submission.problem.title}</span>
         </div>
         <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <span className="mb-1 block text-xs font-bold uppercase text-gray-500">言語</span>
+          <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">言語</span>
           <span className="text-lg font-medium">{submission.language.name}</span>
         </div>
         <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <span className="mb-1 block text-xs font-bold uppercase text-gray-500">ステータス</span>
+          <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">ステータス</span>
           <div className={`text-lg font-bold ${getStatusColor(submission.status)}`}>
             {submission.status}
           </div>
         </div>
         <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <span className="mb-1 block text-xs font-bold uppercase text-gray-500">スコア</span>
+          <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">スコア</span>
           <span className="font-mono text-2xl font-bold text-blue-600">
             {submission.score !== null ? submission.score : '-'}
           </span>
@@ -101,7 +101,7 @@ export default function SubmissionDetailPage() {
           <div className="mb-1 flex items-center gap-2 font-bold">
             <span className="text-lg">Result Summary</span>
           </div>
-          <p className="whitespace-pre-wrap text-sm">{submission.message}</p>
+          <p className="text-sm whitespace-pre-wrap">{submission.message}</p>
         </div>
       )}
 
@@ -160,22 +160,22 @@ export default function SubmissionDetailPage() {
                 )}
                 {exec.testcase.input && (
                   <div>
-                    <span className="text-xs font-bold uppercase text-gray-400">Input</span>
+                    <span className="text-xs font-bold text-gray-400 uppercase">Input</span>
                     <pre className="mt-1 max-h-32 overflow-y-auto rounded border bg-gray-50 p-2 font-mono text-xs">
                       {exec.testcase.input}
                     </pre>
                   </div>
                 )}
                 <div>
-                  <span className="text-xs font-bold uppercase text-gray-400">Stdout</span>
-                  <pre className="mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap rounded border bg-gray-50 p-2 font-mono text-xs">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Stdout</span>
+                  <pre className="mt-1 max-h-32 overflow-y-auto rounded border bg-gray-50 p-2 font-mono text-xs whitespace-pre-wrap">
                     {exec.stdout || <span className="italic opacity-50">(empty)</span>}
                   </pre>
                 </div>
                 {exec.stderr && (
                   <div>
-                    <span className="text-xs font-bold uppercase text-red-400">Stderr</span>
-                    <pre className="mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap rounded border border-red-100 bg-red-50 p-2 font-mono text-xs text-red-700">
+                    <span className="text-xs font-bold text-red-400 uppercase">Stderr</span>
+                    <pre className="mt-1 max-h-32 overflow-y-auto rounded border border-red-100 bg-red-50 p-2 font-mono text-xs whitespace-pre-wrap text-red-700">
                       {exec.stderr}
                     </pre>
                   </div>

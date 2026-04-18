@@ -105,7 +105,7 @@ export default function ProblemDetailPage() {
       <div className="bg-white py-8">
         <h3 className="text-lg font-bold text-gray-900">問題文</h3>
         <div className="prose prose-blue max-w-none">
-          <div className="whitespace-pre-wrap font-sans text-lg leading-relaxed text-gray-800">
+          <div className="font-sans text-lg leading-relaxed whitespace-pre-wrap text-gray-800">
             {problem.problemStatement}
           </div>
         </div>
@@ -126,19 +126,19 @@ export default function ProblemDetailPage() {
                 <div className="space-y-3 p-4">
                   <div>
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase text-gray-400">Input</span>
+                      <span className="text-xs font-semibold text-gray-400 uppercase">Input</span>
                       <CopyButton text={tc.input || ''} label="Input" />
                     </div>
-                    <pre className="whitespace-pre-wrap rounded border border-gray-100 bg-gray-50 p-2 font-mono text-xs">
+                    <pre className="rounded border border-gray-100 bg-gray-50 p-2 font-mono text-xs whitespace-pre-wrap">
                       {tc.input || <span className="italic opacity-50">(empty)</span>}
                     </pre>
                   </div>
                   <div>
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase text-gray-400">Output</span>
+                      <span className="text-xs font-semibold text-gray-400 uppercase">Output</span>
                       <CopyButton text={tc.output || ''} label="Output" />
                     </div>
-                    <pre className="whitespace-pre-wrap rounded border border-gray-100 bg-gray-50 p-2 font-mono text-xs">
+                    <pre className="rounded border border-gray-100 bg-gray-50 p-2 font-mono text-xs whitespace-pre-wrap">
                       {tc.output || <span className="italic opacity-50">(empty)</span>}
                     </pre>
                   </div>

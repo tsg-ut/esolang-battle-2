@@ -7,3 +7,5 @@ package-lock.json
 *.log
 packages/db/prisma/generated
 next-env.d.ts
+*.yml
+*.yaml

@@ -66,7 +66,7 @@ export const CrossGridBoard: React.FC<CrossGridBoardProps> = ({
         <table className="w-full table-fixed border-separate border-spacing-1">
           <thead>
             <tr>
-              <th className="w-24 px-2 py-1 text-left text-[10px] font-bold uppercase text-gray-400">
+              <th className="w-24 px-2 py-1 text-left text-[10px] font-bold text-gray-400 uppercase">
                 Language \ Problem
               </th>
               {problemIds.map((pid) => (
@@ -117,10 +117,10 @@ export const CrossGridBoard: React.FC<CrossGridBoardProps> = ({
                   style={{ backgroundColor: team.color }}
                 />
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  <span className="text-xs font-bold tracking-wider text-gray-400 uppercase">
                     {team.name || `Team ${team.id}`}
                   </span>
-                  <span className="font-mono text-3xl font-black leading-none text-gray-800">
+                  <span className="font-mono text-3xl leading-none font-black text-gray-800">
                     {teamStats[team.id] || 0}
                   </span>
                 </div>

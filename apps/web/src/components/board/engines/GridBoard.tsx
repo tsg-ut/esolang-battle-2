@@ -103,7 +103,7 @@ export const GridBoard: React.FC<GridBoardProps> = ({
                 }}
               >
                 <div className="flex h-full w-full flex-col items-center justify-center overflow-hidden p-1 text-center sm:p-2">
-                  <div className="w-full truncate text-[min(2.5vw,18px)] font-black leading-tight">
+                  <div className="w-full truncate text-[min(2.5vw,18px)] leading-tight font-black">
                     {info.label}
                   </div>
                   {cell?.score !== null && (
@@ -128,10 +128,10 @@ export const GridBoard: React.FC<GridBoardProps> = ({
                   style={{ backgroundColor: team.color }}
                 />
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  <span className="text-xs font-bold tracking-wider text-gray-400 uppercase">
                     {team.name || `Team ${team.id}`}
                   </span>
-                  <span className="font-mono text-3xl font-black leading-none text-gray-800">
+                  <span className="font-mono text-3xl leading-none font-black text-gray-800">
                     {teamStats[team.id] || 0}
                   </span>
                 </div>

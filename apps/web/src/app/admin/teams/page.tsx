@@ -66,7 +66,7 @@ export default function TeamList() {
           dataIndex="name"
           title="Name"
           sorter
-          render={(val) => val || <span className="italic text-gray-400">(Unnamed)</span>}
+          render={(val) => val || <span className="text-gray-400 italic">(Unnamed)</span>}
         />
         <Table.Column
           dataIndex="contestId"

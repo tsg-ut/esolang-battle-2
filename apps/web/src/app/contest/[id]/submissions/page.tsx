@@ -137,14 +137,14 @@ export default function SubmissionsPage() {
       key: 'team',
       render: (_, record) => {
         const team = record.user.teams.find((t: any) => t.contestId === contestId);
-        if (!team) return <span className="italic text-gray-400">無所属</span>;
+        if (!team) return <span className="text-gray-400 italic">無所属</span>;
         return (
           <div className="flex items-center gap-2">
             <div
               className="h-3 w-3 flex-shrink-0 rounded-full border border-gray-200"
               style={{ backgroundColor: team.color }}
             />
-            <span className={!team.name ? 'italic text-gray-500' : 'font-medium'}>
+            <span className={!team.name ? 'text-gray-500 italic' : 'font-medium'}>
               {team.name || `(名前なし: ${team.color})`}
             </span>
           </div>
@@ -211,7 +211,7 @@ export default function SubmissionsPage() {
         score !== null ? (
           <span className="font-mono text-lg font-bold text-blue-600">{score}</span>
         ) : (
-          <span className="animate-pulse text-xs italic text-gray-400">採点中...</span>
+          <span className="animate-pulse text-xs text-gray-400 italic">採点中...</span>
         ),
     },
     {

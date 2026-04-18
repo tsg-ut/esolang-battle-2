@@ -159,10 +159,10 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({
                   style={{ backgroundColor: team.color }}
                 />
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  <span className="text-xs font-bold tracking-wider text-gray-400 uppercase">
                     {team.name || `Team ${team.id}`}
                   </span>
-                  <span className="font-mono text-3xl font-black leading-none text-gray-800">
+                  <span className="font-mono text-3xl leading-none font-black text-gray-800">
                     {teamStats[team.id] || 0}
                   </span>
                 </div>
