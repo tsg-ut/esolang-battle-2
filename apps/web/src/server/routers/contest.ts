@@ -1,11 +1,14 @@
-import { contestIdSchema } from '@esolang-battle/common';
 import { getAvatarUrl } from '@/utils/user';
 
+import { contestIdSchema } from '@esolang-battle/common';
+
+import { ensureContestAccess } from '../function/contest';
 import { getBoard } from '../function/getBoard';
 import { publicProcedure, router } from '../trpc';
 
 export const contestRouter = router({
   getContests: publicProcedure.query(async ({ ctx }) => {
+    // 管理者以外は公開されているコンテストのみ表示
     const where = ctx.user?.isAdmin ? {} : { isPublic: true };
     const contests = await ctx.prisma.contest.findMany({
       where,
@@ -20,9 +23,11 @@ export const contestRouter = router({
     }));
   }),
   getBoard: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
+    await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
     return await getBoard(ctx.prisma, input.contestId);
   }),
   getContest: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
+    await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
     const contest = await ctx.prisma.contest.findUnique({
       where: { id: input.contestId },
     });
@@ -37,6 +42,7 @@ export const contestRouter = router({
     };
   }),
   getTeams: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
+    await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
     return await ctx.prisma.team.findMany({
       where: { contestId: input.contestId },
       select: { id: true, name: true, color: true },
@@ -44,6 +50,7 @@ export const contestRouter = router({
   }),
   getStandings: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
     const contestId = input.contestId;
+    await ensureContestAccess(ctx.prisma, contestId, ctx.user);
 
     const contest = await ctx.prisma.contest.findUnique({
       where: { id: contestId },
@@ -129,7 +136,11 @@ export const contestRouter = router({
 
     // 同率順位の付与 (1-2-2-4 方式)
     userStandings = userStandings.map((u, i, arr) => {
-      if (i > 0 && u.solvedCount === arr[i - 1].solvedCount && u.totalScore === arr[i - 1].totalScore) {
+      if (
+        i > 0 &&
+        u.solvedCount === arr[i - 1].solvedCount &&
+        u.totalScore === arr[i - 1].totalScore
+      ) {
         u.rank = arr[i - 1].rank;
       } else {
         u.rank = i + 1;
@@ -185,7 +196,11 @@ export const contestRouter = router({
 
     // 同率順位の付与
     teamStandings = teamStandings.map((t, i, arr) => {
-      if (i > 0 && t.solvedCount === arr[i - 1].solvedCount && t.totalScore === arr[i - 1].totalScore) {
+      if (
+        i > 0 &&
+        t.solvedCount === arr[i - 1].solvedCount &&
+        t.totalScore === arr[i - 1].totalScore
+      ) {
         t.rank = arr[i - 1].rank;
       } else {
         t.rank = i + 1;

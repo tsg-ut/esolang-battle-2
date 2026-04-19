@@ -4,7 +4,7 @@ import { useParams, usePathname } from 'next/navigation';
 
 import { trpc } from '@/utils/trpc';
 import { ClockCircleOutlined } from '@ant-design/icons';
-import { Space, Spin, Tag, Typography } from 'antd';
+import { Button, Result, Space, Spin, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -14,7 +14,24 @@ export default function ContestLayout({ children }: { children: React.ReactNode 
   const params = useParams();
   const contestId = Number(params.id);
 
-  const { data: contest, isLoading } = trpc.getContest.useQuery({ contestId });
+  const { data: contest, isLoading, error } = trpc.getContest.useQuery({ contestId });
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <Result
+          status="404"
+          title="404 - Not Found"
+          subTitle="このコンテストにアクセスする権限がないか、コンテストが存在しません。"
+          extra={
+            <Link href="/contests">
+              <Button type="primary">コンテスト一覧に戻る</Button>
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
 
   const tabs = [
     { id: 'board', label: '盤面', path: `/contest/${contestId}/board` },
