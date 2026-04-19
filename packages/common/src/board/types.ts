@@ -5,8 +5,9 @@ export type BoardType = z.infer<typeof BoardType>;
 
 export const BoardCellSchema = z.object({
   ownerTeamIds: z.array(z.number()),
+  submissionIds: z.array(z.number()),
+  ownerUsers: z.array(z.object({ id: z.string(), name: z.string() })).optional(), // API返却用
   score: z.number().nullable(),
-  submissionId: z.number().nullable(),
 });
 export type BoardCell = z.infer<typeof BoardCellSchema>;
 
@@ -80,6 +81,8 @@ export type BoardSubmission = {
   score: number | null;
   codeLength: number;
   user: {
+    name?: string | null;
+    image?: string | null;
     teams: { id: number; color: string; contestId: number }[];
   };
 };

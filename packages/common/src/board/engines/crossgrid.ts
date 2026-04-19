@@ -58,7 +58,7 @@ export class CrossGridBoardEngine extends BaseBoardEngine<CrossGridBoardConfig> 
         [targetCellId]: {
           ownerTeamIds: [team.id],
           score: subScore,
-          submissionId: submission.id,
+          submissionIds: [submission.id],
         },
       };
     } else if (isSameScore && allowMultiOwner) {
@@ -80,7 +80,7 @@ export class CrossGridBoardEngine extends BaseBoardEngine<CrossGridBoardConfig> 
     const state: BoardState = {};
     for (const pid of config.problemIds) {
       for (const lid of config.languageIds) {
-        state[`p_${pid}_l_${lid}`] = { ownerTeamIds: [], score: null, submissionId: null };
+        state[`p_${pid}_l_${lid}`] = { ownerTeamIds: [], score: null, submissionIds: [] };
       }
     }
 
@@ -89,7 +89,7 @@ export class CrossGridBoardEngine extends BaseBoardEngine<CrossGridBoardConfig> 
         const teamId = parseInt(teamIdStr, 10);
         for (const cellId of cellIds as string[]) {
           if (state[cellId]) {
-            state[cellId] = { ownerTeamIds: [teamId], score: null, submissionId: null };
+            state[cellId] = { ownerTeamIds: [teamId], score: null, submissionIds: [] };
           }
         }
       }

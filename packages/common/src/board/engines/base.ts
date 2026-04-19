@@ -55,23 +55,27 @@ export abstract class BaseBoardEngine<
 
     if (isAdjacentToOwned || isStartingCell) {
       if (shouldReplaceOwners) {
-        // 新しい単独所有者
+        // 新しい単独所有者（または複数チームによる置換）
         return {
           ...state,
           [targetCellId]: {
             ownerTeamIds: [team.id],
             score: subScore,
-            submissionId: submission.id,
+            submissionIds: [submission.id],
           },
         };
       } else if (isSameScore && allowMultiOwner) {
         // 同じスコアで複数所有を許可する場合
-        if (!cell.ownerTeamIds.includes(team.id)) {
+        const alreadyTeamOwned = cell.ownerTeamIds.includes(team.id);
+        const alreadySubOwned = cell.submissionIds.includes(submission.id);
+
+        if (!alreadyTeamOwned || !alreadySubOwned) {
           return {
             ...state,
             [targetCellId]: {
               ...cell,
-              ownerTeamIds: [...cell.ownerTeamIds, team.id].sort(),
+              ownerTeamIds: alreadyTeamOwned ? cell.ownerTeamIds : [...cell.ownerTeamIds, team.id].sort(),
+              submissionIds: alreadySubOwned ? cell.submissionIds : [...cell.submissionIds, submission.id],
             },
           };
         }

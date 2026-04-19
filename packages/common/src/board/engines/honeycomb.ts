@@ -37,7 +37,7 @@ export class HoneycombBoardEngine extends BaseBoardEngine<HoneycombBoardConfig> 
   createInitialState(config: HoneycombBoardConfig): BoardState {
     const state: BoardState = {};
     for (const id of config.cellIds) {
-      state[id] = { ownerTeamIds: [], score: null, submissionId: null };
+      state[id] = { ownerTeamIds: [], submissionIds: [], score: null };
     }
 
     if (config.startingPositions) {
@@ -45,7 +45,10 @@ export class HoneycombBoardEngine extends BaseBoardEngine<HoneycombBoardConfig> 
         const teamId = parseInt(teamIdStr, 10);
         for (const cellId of cellIds as string[]) {
           if (state[cellId]) {
-            state[cellId] = { ownerTeamIds: [teamId], score: null, submissionId: null };
+            if (!state[cellId].ownerTeamIds.includes(teamId)) {
+              state[cellId].ownerTeamIds.push(teamId);
+              state[cellId].ownerTeamIds.sort((a, b) => a - b);
+            }
           }
         }
       }

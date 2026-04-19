@@ -24,7 +24,7 @@ export class GridBoardEngine extends BaseBoardEngine<GridBoardConfig> {
     // 全セルを空で初期化
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < height; y++) {
-        state[`${x}_${y}`] = { ownerTeamIds: [], score: null, submissionId: null };
+        state[`${x}_${y}`] = { ownerTeamIds: [], submissionIds: [], score: null };
       }
     }
 
@@ -34,7 +34,10 @@ export class GridBoardEngine extends BaseBoardEngine<GridBoardConfig> {
         const teamId = parseInt(teamIdStr, 10);
         for (const cellId of cellIds as string[]) {
           if (state[cellId]) {
-            state[cellId] = { ownerTeamIds: [teamId], score: null, submissionId: null };
+            if (!state[cellId].ownerTeamIds.includes(teamId)) {
+              state[cellId].ownerTeamIds.push(teamId);
+              state[cellId].ownerTeamIds.sort((a, b) => a - b);
+            }
           }
         }
       }
