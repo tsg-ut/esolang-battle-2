@@ -23,6 +23,7 @@ import {
   Input,
   List,
   Space,
+  Tag,
   Typography,
   Upload,
 } from 'antd';
@@ -187,13 +188,18 @@ export function ProfileCard() {
               所属チーム
             </Title>
             <List
-              dataSource={(session?.user as any)?.teams || []}
+              dataSource={fullUser?.teams || []}
               renderItem={(t: any) => (
                 <List.Item className="px-0">
                   <List.Item.Meta
                     avatar={<Avatar size="small" style={{ backgroundColor: t.color }} />}
-                    title={`コンテスト #${t.contestId}`}
-                    description={<Text type="secondary">{`チームカラー: ${t.color}`}</Text>}
+                    title={t.contest?.name || `コンテスト #${t.contestId}`}
+                    description={
+                      <div className="flex items-center gap-2">
+                        <Text type="secondary">{t.name || `チーム ${t.id}`}</Text>
+                        <Tag color={t.color} style={{ border: 'none', height: 16 }} />
+                      </div>
+                    }
                   />
                 </List.Item>
               )}

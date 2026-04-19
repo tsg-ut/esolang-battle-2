@@ -12,6 +12,13 @@ export const userRouter = router({
   getMeFull: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.prisma.user.findUnique({
       where: { id: ctx.user.id },
+      include: {
+        teams: {
+          include: {
+            contest: true,
+          },
+        },
+      },
     });
   }),
   updateMe: protectedProcedure

@@ -91,26 +91,30 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         // 初回サインイン時のみ user オブジェクトが渡される
-        // 必要な最小限の情報だけをトークンに含める（image は絶対に入れない）
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          isAdmin: (user as any).isAdmin,
-          teams: (user as any).teams || [],
-        };
+        token.id = user.id;
+        token.isAdmin = (user as any).isAdmin;
       }
+
+      // 常に DB から最新のチーム情報を取得 (または適宜キャッシュを考慮)
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { isAdmin: true, teams: true },
+        });
+        if (dbUser) {
+          token.isAdmin = dbUser.isAdmin;
+          token.teams = dbUser.teams;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         // トークンからセッションへ情報を移す
         session.user.id = token.id as string;
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
         session.user.isAdmin = (token as any).isAdmin;
         session.user.teams = (token as any).teams || [];
-        // session.user.image は意図的に undefined または既存のままにする
       }
       return session;
     },
