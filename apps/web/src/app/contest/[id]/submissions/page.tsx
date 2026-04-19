@@ -9,6 +9,7 @@ import { trpc } from '@/utils/trpc';
 import { Button, Table, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
+import { StringFilterDropdown } from '@/components/admin/StringFilterDropdown';
 
 type Scope = 'self' | 'team' | 'all';
 
@@ -30,6 +31,7 @@ export default function SubmissionsPage() {
   const currentPage = Number(searchParams.get('page')) || 1;
   const sortField = searchParams.get('sortField') || undefined;
   const sortOrder = searchParams.get('sortOrder') || undefined;
+  const filterUserName = searchParams.get('userName') || undefined;
 
   // 複数選択フィルタのデコード
   const filterProblemIds = useMemo(
@@ -67,6 +69,7 @@ export default function SubmissionsPage() {
     if (scope === 'self' && me?.id) f.userId = me.id;
     if (scope === 'team' && myTeam?.id) f.teamId = Number(myTeam.id);
 
+    if (filterUserName) f.userName = filterUserName;
     if (filterProblemIds.length > 0) f.problemId = filterProblemIds;
     if (filterLanguageIds.length > 0) f.languageId = filterLanguageIds;
     if (filterStatuses.length > 0) f.status = filterStatuses;
@@ -81,6 +84,7 @@ export default function SubmissionsPage() {
     scope,
     me?.id,
     myTeam?.id,
+    filterUserName,
     filterProblemIds,
     filterLanguageIds,
     filterStatuses,
@@ -107,6 +111,7 @@ export default function SubmissionsPage() {
       page: pagination.current ? String(pagination.current) : '1',
       sortField: s.field as string,
       sortOrder: s.order as string,
+      userName: filters.userName as string | null,
       problemId: filters.problemId as string[],
       languageId: filters.languageId as string[],
       status: filters.status as string[],
@@ -129,7 +134,9 @@ export default function SubmissionsPage() {
     },
     {
       title: 'ユーザ',
-      key: 'user',
+      key: 'userName',
+      filteredValue: filterUserName ? [filterUserName] : null,
+      filterDropdown: (props) => <StringFilterDropdown {...props} />,
       render: (_, record) => record.user.name,
     },
     {

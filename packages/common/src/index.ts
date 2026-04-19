@@ -30,6 +30,7 @@ export const listProblemsSchema = z.object({
 export const submissionFilterSchema = z
   .object({
     userId: z.string().optional(),
+    userName: z.string().optional(),
     teamId: z.number().optional(),
     problemId: z.union([z.number(), z.array(z.number())]).optional(),
     languageId: z.union([z.number(), z.array(z.number())]).optional(),

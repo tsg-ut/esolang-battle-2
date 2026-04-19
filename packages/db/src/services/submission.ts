@@ -4,6 +4,7 @@ import { PrismaClient } from '../../prisma/generated/client/index';
 
 export type GetSubmissionsFilter = {
   userId?: string;
+  userName?: string;
   teamId?: number;
   problemId?: number | number[];
   languageId?: number | number[];
@@ -16,6 +17,14 @@ export type GetSubmissionsFilter = {
 export async function findSubmissions(prisma: PrismaClient, filter: GetSubmissionsFilter = {}) {
   const where: any = {};
   if (filter.userId) where.userId = filter.userId;
+  if (filter.userName) {
+    where.user = {
+      name: {
+        contains: filter.userName,
+        mode: 'insensitive',
+      },
+    };
+  }
   if (filter.problemId) {
     where.problemId = Array.isArray(filter.problemId) ? { in: filter.problemId } : filter.problemId;
   }
