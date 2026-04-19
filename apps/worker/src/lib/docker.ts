@@ -1,7 +1,6 @@
 import Docker from 'dockerode';
-import fs from 'fs/promises';
-import os from 'os';
-import path from 'path';
+import tar from 'tar-stream';
+import { Readable } from 'stream';
 
 const docker = new Docker();
 
@@ -20,6 +19,50 @@ export type TestCaseWithIO = {
 const DEFAULT_TIMEOUT_MS = 10000; // 10s
 const MEMORY_LIMIT = 512 * 1024 * 1024; // 512MB
 const BATCH_MEMORY_LIMIT = 1024 * 1024 * 1024; // 1GB
+
+/**
+ * Tar helper: Create a tarball buffer from a record of files
+ */
+async function createTar(files: Record<string, string | Buffer>): Promise<Buffer> {
+  const pack = tar.pack();
+  for (const [name, content] of Object.entries(files)) {
+    pack.entry({ name, mode: 0o755 }, content);
+  }
+  pack.finalize();
+
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    pack.on('data', (chunk) => chunks.push(chunk));
+    pack.on('error', reject);
+    pack.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+}
+
+/**
+ * Tar helper: Extract files from a tar stream
+ */
+async function extractTar(stream: any): Promise<Record<string, string>> {
+  const extract = tar.extract();
+  const files: Record<string, string> = {};
+
+  return new Promise((resolve, reject) => {
+    extract.on('entry', (header, stream, next) => {
+      const chunks: Buffer[] = [];
+      // パスからファイル名のみを抽出 (例: "tmp/OUT_0" -> "OUT_0")
+      const fileName = header.name.split('/').pop() || header.name;
+      
+      stream.on('data', (chunk) => chunks.push(chunk));
+      stream.on('end', () => {
+        files[fileName] = Buffer.concat(chunks).toString('utf8');
+        next();
+      });
+      stream.on('error', reject);
+    });
+    extract.on('finish', () => resolve(files));
+    extract.on('error', reject);
+    stream.pipe(extract);
+  });
+}
 
 /**
  * コンテナの共通セキュリティ設定
@@ -44,42 +87,41 @@ async function runExecutionBatch(
   timeoutMs: number,
   memoryLimit: number
 ): Promise<Record<number, DockerResult>> {
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'esolang-exec-'));
+  const codeFileName = 'solution.src';
+  const files: Record<string, string | Buffer> = {
+    [codeFileName]: code,
+  };
+
+  const scriptLines: string[] = [];
+  for (const tc of testCases) {
+    const base = String(tc.id);
+    files[`IN_${base}`] = tc.input;
+
+    // /tmp に結果を書き出す
+    scriptLines.push(
+      `/usr/bin/time -v -o /tmp/TIME_${base} script /tmp/${codeFileName} < /tmp/IN_${base} > /tmp/OUT_${base} 2>/tmp/ERR_${base}; echo $? > /tmp/EXIT_${base}`
+    );
+  }
+
+  files['runner.sh'] = scriptLines.join('\n');
 
   try {
-    // 1. 準備: コードと各テストケースの入力を書き出す
-    const codeFileName = 'solution.src';
-    await fs.writeFile(path.join(tmpDir, codeFileName), code);
-
-    const scriptLines: string[] = [];
-    for (const tc of testCases) {
-      const base = String(tc.id);
-      await fs.writeFile(path.join(tmpDir, `IN_${base}`), tc.input, 'utf8');
-
-      // script /volume/solution.src < /volume/INPUT 形式
-      // BusyBox の time -v を使用して詳細なリソース使用状況を記録
-      scriptLines.push(
-        `/usr/bin/time -v -o /volume/TIME_${base} script /volume/${codeFileName} < /volume/IN_${base} > /volume/OUT_${base} 2>/volume/ERR_${base}; echo $? > /volume/EXIT_${base}`
-      );
-    }
-
-    // 実行制御用シェルスクリプト
-    await fs.writeFile(path.join(tmpDir, 'runner.sh'), scriptLines.join('\n'), { mode: 0o755 });
-
-    // 2. 実行: コンテナの作成と開始
-    console.log(`Starting container with image: ${image}`);
+    // 1. コンテナ作成
+    console.log(`Creating container with image: ${image}`);
     const container = await docker.createContainer({
       Image: image,
-      Cmd: ['sh', '/volume/runner.sh'],
-      HostConfig: {
-        ...getHostConfig(memoryLimit),
-        Binds: [`${tmpDir}:/volume:rw`],
-      },
+      Cmd: ['sh', '/tmp/runner.sh'],
+      HostConfig: getHostConfig(memoryLimit),
     });
 
+    // 2. ファイルを送り込む (/tmp に展開)
+    const tarBuffer = await createTar(files);
+    await container.putArchive(tarBuffer, { path: '/tmp' });
+    
+    // 3. 開始
     await container.start();
 
-    // 3. 監視: 終了またはタイムアウトを待つ
+    // 4. 監視
     const waitPromise = container.wait();
     const timeoutPromise = new Promise((resolve) =>
       setTimeout(() => resolve({ timeout: true }), timeoutMs)
@@ -92,7 +134,10 @@ async function runExecutionBatch(
       await container.kill().catch((err) => console.error('Failed to kill container:', err));
     }
 
-    // 4. 回収: コンテナ削除と結果ファイルの読み込み
+    // 5. 結果回収 (/tmp から取得)
+    const archiveStream = await container.getArchive({ path: '/tmp' });
+    const outputFiles = await extractTar(archiveStream);
+
     await container
       .remove({ force: true })
       .catch((err) => console.error('Failed to remove container:', err));
@@ -100,12 +145,11 @@ async function runExecutionBatch(
     const results: Record<number, DockerResult> = {};
     for (const tc of testCases) {
       const base = String(tc.id);
-      const [stdout, stderr, exitText, timeText] = await Promise.all([
-        fs.readFile(path.join(tmpDir, `OUT_${base}`), 'utf8').catch(() => ''),
-        fs.readFile(path.join(tmpDir, `ERR_${base}`), 'utf8').catch(() => ''),
-        fs.readFile(path.join(tmpDir, `EXIT_${base}`), 'utf8').catch(() => '-1'),
-        fs.readFile(path.join(tmpDir, `TIME_${base}`), 'utf8').catch(() => ''),
-      ]);
+      
+      const stdout = outputFiles[`OUT_${base}`] || '';
+      const stderr = outputFiles[`ERR_${base}`] || '';
+      const exitText = outputFiles[`EXIT_${base}`] || '-1';
+      const timeText = outputFiles[`TIME_${base}`] || '';
 
       let exitCode = parseInt(exitText.trim(), 10);
       let finalStderr = stderr;
@@ -115,7 +159,6 @@ async function runExecutionBatch(
         finalStderr += '\nTime Limit Exceeded';
       }
 
-      // time -v の出力をパースして実行時間を計算 (User time + System time)
       let durationMs = 0;
       const userTimeMatch = timeText.match(/User time \(seconds\): ([\d.]+)/);
       const sysTimeMatch = timeText.match(/System time \(seconds\): ([\d.]+)/);
@@ -128,7 +171,6 @@ async function runExecutionBatch(
         const sysTime = parseFloat(sysTimeMatch[1]);
         durationMs = Math.round((userTime + sysTime) * 1000);
       } else if (elapsedMatch) {
-        // フォールバック: Elapsed time から計算
         const hours = elapsedMatch[1] ? parseInt(elapsedMatch[1], 10) : 0;
         const mins = parseInt(elapsedMatch[2], 10);
         const secs = parseFloat(elapsedMatch[3]);
@@ -143,10 +185,9 @@ async function runExecutionBatch(
       };
     }
     return results;
-  } finally {
-    await fs
-      .rm(tmpDir, { recursive: true, force: true })
-      .catch((err) => console.error('Failed to cleanup tmpDir:', err));
+  } catch (err) {
+    console.error('Execution error:', err);
+    throw err;
   }
 }
 
@@ -190,25 +231,20 @@ export async function runJudgeScript(
   inputJson: any,
   timeoutMs: number = DEFAULT_TIMEOUT_MS
 ): Promise<any> {
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'esolang-judge-'));
+  const files: Record<string, string> = {
+    'judge.src': code,
+    'input.json': JSON.stringify(inputJson),
+  };
 
   try {
-    const codeFileName = 'judge.src';
-    await fs.writeFile(path.join(tmpDir, codeFileName), code, 'utf8');
-    await fs.writeFile(path.join(tmpDir, 'input.json'), JSON.stringify(inputJson), 'utf8');
-
-    // 実行コマンド: script /volume/judge.src < /volume/input.json
-    const runnerCmd = `script /volume/${codeFileName} < /volume/input.json`;
-
+    const tarBuffer = await createTar(files);
     const container = await docker.createContainer({
       Image: image,
-      Cmd: ['sh', '-c', runnerCmd],
-      HostConfig: {
-        ...getHostConfig(MEMORY_LIMIT),
-        Binds: [`${tmpDir}:/volume:rw`],
-      },
+      Cmd: ['sh', '-c', 'script /tmp/judge.src < /tmp/input.json'],
+      HostConfig: getHostConfig(MEMORY_LIMIT),
     });
 
+    await container.putArchive(tarBuffer, { path: '/tmp' });
     await container.start();
 
     const waitPromise = container.wait();
@@ -223,9 +259,7 @@ export async function runJudgeScript(
       await container.kill().catch((err) => console.error('Failed to kill judge container:', err));
     }
 
-    // 標準出力を取得
     const logs = await container.logs({ stdout: true, stderr: true });
-    // Dockerのログ形式（ヘッダー付き）をデコード
     const output = decodeDockerLogs(logs);
 
     await container
@@ -240,10 +274,9 @@ export async function runJudgeScript(
       console.error('Failed to parse judge script output:', output.stdout);
       throw new Error(`Invalid JSON from judge script: ${output.stderr}`);
     }
-  } finally {
-    await fs
-      .rm(tmpDir, { recursive: true, force: true })
-      .catch((err) => console.error('Failed to remove tmpDir:', err));
+  } catch (err) {
+    console.error('Judge error:', err);
+    throw err;
   }
 }
 

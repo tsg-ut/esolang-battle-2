@@ -17,11 +17,13 @@
     "dockerode": "^4.0.10",
     "dotenv": "^17.4.2",
     "ioredis": "^5.10.1",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "tar-stream": "^3.1.8"
   },
   "devDependencies": {
     "@types/dockerode": "^4.0.1",
     "@types/node": "^25.6.0",
+    "@types/tar-stream": "^3.1.4",
     "esbuild": "^0.28.0",
     "prisma": "^7.7.0",
     "tsx": "^4.21.0",
