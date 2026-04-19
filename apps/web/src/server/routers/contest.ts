@@ -6,7 +6,6 @@ import { publicProcedure, router } from '../trpc';
 
 export const contestRouter = router({
   getContests: publicProcedure.query(async ({ ctx }) => {
-    // 管理者以外は公開されているコンテストのみ表示
     const where = ctx.user?.isAdmin ? {} : { isPublic: true };
     const contests = await ctx.prisma.contest.findMany({
       where,
@@ -52,24 +51,18 @@ export const contestRouter = router({
     });
     const isAsc = contest?.scoreOrder === 'ASC';
 
-    // 1. 全問題を取得
     const problems = await ctx.prisma.problem.findMany({
       where: { contestId },
       select: { id: true, title: true },
       orderBy: { id: 'asc' },
     });
 
-    // 2. 全ユーザーとチーム情報を取得
     const users = await ctx.prisma.user.findMany({
       where: {
-        teams: {
-          some: { contestId },
-        },
+        teams: { some: { contestId } },
       },
       include: {
-        teams: {
-          where: { contestId },
-        },
+        teams: { where: { contestId } },
       },
     });
 
@@ -77,10 +70,11 @@ export const contestRouter = router({
       where: { contestId },
     });
 
-    // 3. 有効な提出（スコアがあるもの）をすべて取得
-    const rawSubmissions = await ctx.prisma.submission.findMany({
+    // AC かつ スコアがある提出のみを取得
+    const submissions = await ctx.prisma.submission.findMany({
       where: {
         problem: { contestId },
+        status: 'AC',
         score: { not: null },
       },
       select: {
@@ -90,29 +84,24 @@ export const contestRouter = router({
       },
     });
 
-    // score が確実に number であることを保証する型ガード
-    const submissions = rawSubmissions.filter(
-      (s): s is typeof s & { score: number } => s.score !== null
-    );
-
     // --- 個人順位の計算 ---
-    const userStandings = users.map((user) => {
+    let userStandings: any[] = users.map((user) => {
       const problemScores: Record<number, number | null> = {};
       problems.forEach((p) => (problemScores[p.id] = null));
 
       submissions
         .filter((s) => s.userId === user.id)
         .forEach((s) => {
-          const { score, problemId } = s;
-          const current = problemScores[problemId];
+          const score = s.score as number;
+          const current = problemScores[s.problemId];
 
           if (current === null) {
-            problemScores[problemId] = score;
+            problemScores[s.problemId] = score;
           } else {
             if (isAsc) {
-              if (score < current) problemScores[problemId] = score;
+              if (score < current) problemScores[s.problemId] = score;
             } else {
-              if (score > current) problemScores[problemId] = score;
+              if (score > current) problemScores[s.problemId] = score;
             }
           }
         });
@@ -133,20 +122,23 @@ export const contestRouter = router({
       };
     });
 
-    // ソート順の適用
     userStandings.sort((a, b) => {
-      if (isAsc) {
-        if (a.solvedCount !== b.solvedCount) {
-          return b.solvedCount - a.solvedCount;
-        }
-        return a.totalScore - b.totalScore;
+      if (a.solvedCount !== b.solvedCount) return b.solvedCount - a.solvedCount;
+      return isAsc ? a.totalScore - b.totalScore : b.totalScore - a.totalScore;
+    });
+
+    // 同率順位の付与 (1-2-2-4 方式)
+    userStandings = userStandings.map((u, i, arr) => {
+      if (i > 0 && u.solvedCount === arr[i - 1].solvedCount && u.totalScore === arr[i - 1].totalScore) {
+        u.rank = arr[i - 1].rank;
       } else {
-        return b.totalScore - a.totalScore;
+        u.rank = i + 1;
       }
+      return u;
     });
 
     // --- チーム順位の計算 ---
-    const teamStandings = teams.map((team) => {
+    let teamStandings: any[] = teams.map((team) => {
       const teamUserIds = users
         .filter((u) => u.teams.some((t) => t.id === team.id))
         .map((u) => u.id);
@@ -157,16 +149,16 @@ export const contestRouter = router({
       submissions
         .filter((s) => teamUserIds.includes(s.userId))
         .forEach((s) => {
-          const { score, problemId } = s;
-          const current = problemScores[problemId];
+          const score = s.score as number;
+          const current = problemScores[s.problemId];
 
           if (current === null) {
-            problemScores[problemId] = score;
+            problemScores[s.problemId] = score;
           } else {
             if (isAsc) {
-              if (score < current) problemScores[problemId] = score;
+              if (score < current) problemScores[s.problemId] = score;
             } else {
-              if (score > current) problemScores[problemId] = score;
+              if (score > current) problemScores[s.problemId] = score;
             }
           }
         });
@@ -187,14 +179,18 @@ export const contestRouter = router({
     });
 
     teamStandings.sort((a, b) => {
-      if (isAsc) {
-        if (a.solvedCount !== b.solvedCount) {
-          return b.solvedCount - a.solvedCount;
-        }
-        return a.totalScore - b.totalScore;
+      if (a.solvedCount !== b.solvedCount) return b.solvedCount - a.solvedCount;
+      return isAsc ? a.totalScore - b.totalScore : b.totalScore - a.totalScore;
+    });
+
+    // 同率順位の付与
+    teamStandings = teamStandings.map((t, i, arr) => {
+      if (i > 0 && t.solvedCount === arr[i - 1].solvedCount && t.totalScore === arr[i - 1].totalScore) {
+        t.rank = arr[i - 1].rank;
       } else {
-        return b.totalScore - a.totalScore;
+        t.rank = i + 1;
       }
+      return t;
     });
 
     return {

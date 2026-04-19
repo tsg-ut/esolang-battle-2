@@ -32,8 +32,12 @@ export default function StandingsPage() {
     dataIndex: ['problemScores', p.id],
     key: `problem-${p.id}`,
     align: 'center' as const,
-    render: (score: number) =>
-      score > 0 ? <span className="font-bold text-green-600">{score}</span> : '-',
+    render: (score: number | null) =>
+      score !== null && score !== undefined ? (
+        <span className="font-bold text-green-600">{score}</span>
+      ) : (
+        '-'
+      ),
   }));
 
   const userColumns = [
@@ -41,7 +45,7 @@ export default function StandingsPage() {
       title: '順位',
       key: 'rank',
       width: 60,
-      render: (_: any, __: any, index: number) => index + 1,
+      render: (_: any, record: any) => record.rank,
     },
     {
       title: 'ユーザー',
@@ -77,7 +81,7 @@ export default function StandingsPage() {
       title: '順位',
       key: 'rank',
       width: 60,
-      render: (_: any, __: any, index: number) => index + 1,
+      render: (_: any, record: any) => record.rank,
     },
     {
       title: 'チーム',
