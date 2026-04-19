@@ -6,10 +6,11 @@ import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { trpc } from '@/utils/trpc';
-import { Button, Table, Tag } from 'antd';
+import { Avatar, Button, Table, Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import { StringFilterDropdown } from '@/components/admin/StringFilterDropdown';
+import { UserOutlined } from '@ant-design/icons';
 
 type Scope = 'self' | 'team' | 'all';
 
@@ -137,7 +138,17 @@ export default function SubmissionsPage() {
       key: 'userName',
       filteredValue: filterUserName ? [filterUserName] : null,
       filterDropdown: (props) => <StringFilterDropdown {...props} />,
-      render: (_, record) => record.user.name,
+      render: (_, record) => (
+        <div className="flex items-center gap-2">
+          <Avatar
+            size="small"
+            src={record.user.image}
+            icon={!record.user.image && <UserOutlined />}
+            className="flex-shrink-0"
+          />
+          <span className="truncate">{record.user.name}</span>
+        </div>
+      ),
     },
     {
       title: 'チーム',

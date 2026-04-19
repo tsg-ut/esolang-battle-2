@@ -1,4 +1,5 @@
 import { contestIdSchema } from '@esolang-battle/common';
+import { getAvatarUrl } from '@/utils/user';
 
 import { getBoard } from '../function/getBoard';
 import { publicProcedure, router } from '../trpc';
@@ -124,6 +125,7 @@ export const contestRouter = router({
       return {
         userId: user.id,
         userName: user.name,
+        userImage: getAvatarUrl(user.id, !!user.image),
         teamName: user.teams[0]?.name || user.teams[0]?.color || 'None',
         problemScores,
         solvedCount,

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { getAvatarUrl } from '@/utils/user';
 
 import {
   submissionFilterSchema,
@@ -49,7 +50,14 @@ export const submissionRouter = router({
       }
     }
 
-    return await findSubmissions(ctx.prisma, filter);
+    const results = await findSubmissions(ctx.prisma, filter);
+    return results.map((s) => ({
+      ...s,
+      user: {
+        ...s.user,
+        image: getAvatarUrl(s.user.id, !!s.user.image),
+      },
+    }));
   }),
   getLanguages: publicProcedure.query(async ({ ctx }) => {
     return await findAllLanguages(ctx.prisma);

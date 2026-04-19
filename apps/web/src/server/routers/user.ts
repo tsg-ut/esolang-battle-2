@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { getAvatarUrl } from '@/utils/user';
 
 import { registerSchema } from '@esolang-battle/common';
 import { registerUser } from '@esolang-battle/db';
@@ -7,10 +8,14 @@ import { protectedProcedure, publicProcedure, router } from '../trpc';
 
 export const userRouter = router({
   me: publicProcedure.query(({ ctx }) => {
-    return ctx.user ?? null;
+    if (!ctx.user) return null;
+    return {
+      ...ctx.user,
+      image: getAvatarUrl(ctx.user.id, !!ctx.user.image),
+    };
   }),
   getMeFull: protectedProcedure.query(async ({ ctx }) => {
-    return await ctx.prisma.user.findUnique({
+    const user = await ctx.prisma.user.findUnique({
       where: { id: ctx.user.id },
       include: {
         teams: {
@@ -20,6 +25,11 @@ export const userRouter = router({
         },
       },
     });
+    if (!user) return null;
+    return {
+      ...user,
+      image: getAvatarUrl(user.id, !!user.image),
+    };
   }),
   updateMe: protectedProcedure
     .input(z.object({ name: z.string().min(1).optional(), image: z.string().optional() }))

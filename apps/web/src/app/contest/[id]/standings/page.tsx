@@ -5,7 +5,8 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 
 import { trpc } from '@/utils/trpc';
-import { Spin, Table, Tabs } from 'antd';
+import { Avatar, Spin, Table, Tabs } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
 
 export default function StandingsPage() {
   const params = useParams();
@@ -47,9 +48,17 @@ export default function StandingsPage() {
       dataIndex: 'userName',
       key: 'userName',
       render: (name: string, record: any) => (
-        <div className="flex flex-col">
-          <span className="font-bold">{name}</span>
-          <span className="text-xs text-gray-500">{record.teamName}</span>
+        <div className="flex items-center gap-3">
+          <Avatar
+            size="small"
+            src={record.userImage}
+            icon={!record.userImage && <UserOutlined />}
+            className="flex-shrink-0"
+          />
+          <div className="flex flex-col">
+            <span className="font-bold">{name}</span>
+            <span className="text-xs text-gray-500">{record.teamName}</span>
+          </div>
         </div>
       ),
     },
