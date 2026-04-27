@@ -7,6 +7,7 @@ export type DecathlonJobData = {
   imageId: string;
   code: string;
   testcases: {stdin: string}[];
+  codeEncoding?: 'utf-8' | 'base64';
 };
 
 export async function processDecathlonSubmission(data: DecathlonJobData) {
@@ -16,7 +17,7 @@ export async function processDecathlonSubmission(data: DecathlonJobData) {
   try {
     const dockerResults = await runAllTestCasesInSingleContainer(
       data.imageId,
-      Buffer.from(data.code, 'utf-8'),
+      Buffer.from(data.code, data.codeEncoding ?? 'utf-8'),
       data.testcases.map((tc, i) => ({id: i, input: tc.stdin})),
     );
 
