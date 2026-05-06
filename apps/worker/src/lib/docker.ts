@@ -94,7 +94,7 @@ async function runExecutionBatch(
   image: string,
   code: string | Buffer,
   testCases: TestCaseWithIO[],
-  timeoutMs: number,
+  timeoutMs: number, // 各テストケースあたりのタイムアウト
   memoryLimit: number
 ): Promise<Record<number, DockerResult>> {
   const codeFileName = 'solution.src';
@@ -134,7 +134,7 @@ async function runExecutionBatch(
     // 4. 監視
     const waitPromise = container.wait();
     const timeoutPromise = new Promise((resolve) =>
-      setTimeout(() => resolve({ timeout: true }), timeoutMs)
+      setTimeout(() => resolve({ timeout: true }), timeoutMs * testCases.length)
     );
 
     const raceResult: any = await Promise.race([waitPromise, timeoutPromise]);
