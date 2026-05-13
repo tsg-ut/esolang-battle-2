@@ -34,6 +34,7 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "superjson": "^2.2.6",
+    "trpc-to-openapi": "^3.2.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

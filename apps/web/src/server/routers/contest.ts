@@ -1,27 +1,38 @@
 import { getAvatarUrl } from '@/utils/user';
+import { z } from 'zod';
 
-import { contestIdSchema } from '@esolang-battle/common';
+import { contestIdSchema, contestSummarySchema } from '@esolang-battle/common';
 
 import { ensureContestAccess } from '../function/contest';
 import { getBoard } from '../function/getBoard';
 import { publicProcedure, router } from '../trpc';
 
 export const contestRouter = router({
-  getContests: publicProcedure.query(async ({ ctx }) => {
-    // 管理者以外は公開されているコンテストのみ表示
-    const where = ctx.user?.isAdmin ? {} : { isPublic: true };
-    const contests = await ctx.prisma.contest.findMany({
-      where,
-      orderBy: { startAt: 'desc' },
-    });
-    return contests.map((c) => ({
-      id: c.id,
-      name: c.name,
-      startAt: c.startAt.toISOString(),
-      endAt: c.endAt.toISOString(),
-      isPublic: c.isPublic,
-    }));
-  }),
+  getContests: publicProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/contests',
+        summary: 'コンテスト一覧の取得',
+        description: '開催中および過去のコンテスト一覧を取得します。',
+      },
+    })
+    .output(z.array(contestSummarySchema))
+    .query(async ({ ctx }) => {
+      // 管理者以外は公開されているコンテストのみ表示
+      const where = ctx.user?.isAdmin ? {} : { isPublic: true };
+      const contests = await ctx.prisma.contest.findMany({
+        where,
+        orderBy: { startAt: 'desc' },
+      });
+      return contests.map((c) => ({
+        id: c.id,
+        name: c.name,
+        startAt: c.startAt.toISOString(),
+        endAt: c.endAt.toISOString(),
+        isPublic: c.isPublic,
+      }));
+    }),
   getBoard: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
     await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
     return await getBoard(ctx.prisma, input.contestId);

@@ -27,24 +27,59 @@ export const listProblemsSchema = z.object({
   contestId: z.number().optional(),
 });
 
-export const submissionFilterSchema = z
-  .object({
-    userId: z.string().optional(),
-    userName: z.string().optional(),
-    teamId: z.number().optional(),
-    problemId: z.union([z.number(), z.array(z.number())]).optional(),
-    languageId: z.union([z.number(), z.array(z.number())]).optional(),
-    contestId: z.number().optional(),
-    status: z
-      .union([
-        z.enum(['AC', 'WA', 'TLE', 'RE', 'WJ', 'ALL']),
-        z.array(z.enum(['AC', 'WA', 'TLE', 'RE', 'WJ', 'ALL'])),
-      ])
-      .optional(),
-    orderBy: z.enum(['id', 'submittedAt', 'codeLength', 'score']).optional(),
-    order: z.enum(['asc', 'desc']).optional(),
-  })
-  .optional();
+export const submissionFilterSchema = z.object({
+  userId: z.string().optional(),
+  userName: z.string().optional(),
+  teamId: z.number().optional(),
+  problemId: z.number().optional(), // Union not supported by trpc-to-openapi for query params
+  languageId: z.number().optional(),
+  contestId: z.number().optional(),
+  status: z.enum(['AC', 'WA', 'TLE', 'RE', 'WJ', 'ALL']).optional(),
+  orderBy: z.enum(['id', 'submittedAt', 'codeLength', 'score']).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
+});
+
+export const contestSummarySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  startAt: z.string(),
+  endAt: z.string(),
+  isPublic: z.boolean(),
+});
+
+export const submissionSummarySchema = z.object({
+  id: z.number(),
+  codeLength: z.number(),
+  submittedAt: z.date(),
+  status: z.enum(['AC', 'WA', 'TLE', 'RE', 'WJ']),
+  score: z.number().nullable(),
+  message: z.string().nullable(),
+  languageId: z.number(),
+  userId: z.string(),
+  problemId: z.number(),
+  user: z.object({
+    id: z.string(),
+    name: z.string().nullable(),
+    image: z.string().nullable().optional(),
+    isAdmin: z.boolean(),
+    teams: z.array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+        color: z.string(),
+        contestId: z.number(),
+      })
+    ),
+  }),
+  problem: z.object({
+    id: z.number(),
+    title: z.string(),
+  }),
+  language: z.object({
+    id: z.number(),
+    name: z.string(),
+  }),
+});
 
 export const testCodeSchema = z.object({
   code: z.string(),

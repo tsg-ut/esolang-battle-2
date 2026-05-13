@@ -13,6 +13,7 @@ import {
   CodeOutlined,
   DatabaseOutlined,
   FileTextOutlined,
+  KeyOutlined,
   TeamOutlined,
   TrophyOutlined,
   UserOutlined,
@@ -78,6 +79,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 create: '/admin/languages/create',
                 edit: '/admin/languages/edit/:id',
                 meta: { label: 'Languages', icon: <CodeOutlined /> },
+              },
+              {
+                name: 'api_tokens',
+                list: '/admin/api_tokens',
+                create: '/admin/api_tokens/create',
+                meta: { label: 'API Tokens', icon: <KeyOutlined /> },
               },
 
               // --- 大会管理 ---

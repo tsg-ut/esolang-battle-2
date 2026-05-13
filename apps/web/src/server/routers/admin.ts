@@ -497,4 +497,46 @@ export const adminRouter = router({
       }
       return { success: true, count: submissions.length };
     }),
+
+  // API Tokens
+  adminGetApiTokens: adminProcedure.query(async ({ ctx }) => {
+    const tokens = await ctx.prisma.apiToken.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { user: true },
+    });
+    return tokens.map((t) => ({
+      ...t,
+      userName: t.user.name,
+    }));
+  }),
+  adminCreateApiToken: adminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        name: z.string().optional(),
+        expiresAt: z.coerce.date().nullable().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const crypto = await import('crypto');
+      const token = crypto.randomBytes(32).toString('hex');
+      return await ctx.prisma.apiToken.create({
+        data: {
+          token,
+          userId: input.userId,
+          name: input.name,
+          expiresAt: input.expiresAt,
+        },
+      });
+    }),
+  adminDeleteApiToken: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.prisma.apiToken.delete({ where: { id: input.id } });
+    }),
+  adminDeleteApiTokens: adminProcedure
+    .input(z.object({ ids: z.array(z.string()) }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.prisma.apiToken.deleteMany({ where: { id: { in: input.ids } } });
+    }),
 });

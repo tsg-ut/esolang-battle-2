@@ -52,6 +52,9 @@ export const trpcDataProvider = (): DataProvider => ({
       case 'submissions':
         data = await client.adminGetSubmissions.query();
         break;
+      case 'api_tokens':
+        data = await client.adminGetApiTokens.query();
+        break;
       default:
         throw new Error(`Unknown resource: ${resource}`);
     }
@@ -180,6 +183,13 @@ export const trpcDataProvider = (): DataProvider => ({
       case 'boards':
         data = await client.adminUpsertBoard.mutate({ id: null, ...v } as any);
         break;
+      case 'api_tokens':
+        data = await client.adminCreateApiToken.mutate({
+          userId: v.userId,
+          name: v.name,
+          expiresAt: v.expiresAt,
+        });
+        break;
       default:
         throw new Error(`Create not supported for resource: ${resource}`);
     }
@@ -253,6 +263,9 @@ export const trpcDataProvider = (): DataProvider => ({
       case 'submissions':
         data = await client.adminDeleteSubmission.mutate({ id: Number(id) });
         break;
+      case 'api_tokens':
+        data = await client.adminDeleteApiToken.mutate({ id: String(id) });
+        break;
       default:
         throw new Error(`Delete not supported for resource: ${resource}`);
     }
@@ -262,6 +275,7 @@ export const trpcDataProvider = (): DataProvider => ({
   deleteMany: async ({ resource, ids }) => {
     const r = resource.toLowerCase();
     const numericIds = ids.map(Number);
+    const stringIds = ids.map(String);
     let data: any;
 
     switch (r) {
@@ -282,6 +296,9 @@ export const trpcDataProvider = (): DataProvider => ({
         break;
       case 'submissions':
         data = await client.adminDeleteSubmissions.mutate({ ids: numericIds });
+        break;
+      case 'api_tokens':
+        data = await client.adminDeleteApiTokens.mutate({ ids: stringIds });
         break;
       default:
         throw new Error(`DeleteMany not supported for resource: ${resource}`);

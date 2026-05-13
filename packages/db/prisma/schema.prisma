@@ -24,6 +24,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   Authenticator Authenticator[]
+  apiTokens     ApiToken[]
 
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -31,6 +32,16 @@ model User {
   submissions   Submission[]
   testedProblems Problem[]      @relation("ProblemTesters")
   teams         Team[]
+}
+
+model ApiToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  name      String?  // Description or name for the token
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
 }
 
 model Account {
