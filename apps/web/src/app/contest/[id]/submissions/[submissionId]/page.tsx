@@ -1,15 +1,68 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { trpc } from '@/utils/trpc';
-import { DownloadOutlined, FileUnknownOutlined } from '@ant-design/icons';
-import { Button, Tag } from 'antd';
+import {
+  CopyOutlined,
+  DownloadOutlined,
+  FileUnknownOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import {
+  Alert,
+  Avatar,
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Empty,
+  Row,
+  Space,
+  Tag,
+  Typography,
+} from 'antd';
+import dayjs from 'dayjs';
+
+const { Title, Text } = Typography;
+
+// コピーボタン用のサブコンポーネント
+const CopyButton = ({
+  text,
+  label,
+  showText = false,
+}: {
+  text: string;
+  label: string;
+  showText?: boolean;
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!text) return null;
+
+  return (
+    <Button
+      icon={<CopyOutlined style={{ color: copied ? '#52c41a' : undefined }} />}
+      onClick={handleCopy}
+    >
+      {showText && (copied ? 'Copied!' : `Copy ${label}`)}
+    </Button>
+  );
+};
 
 export default function SubmissionDetailPage() {
   const params = useParams();
+  const contestId = Number(params.id);
   const submissionId = Number(params.submissionId);
 
   const {
@@ -18,27 +71,52 @@ export default function SubmissionDetailPage() {
     error,
   } = trpc.getSubmissionDetail.useQuery({ submissionId });
 
-  if (isLoading) return <div className="py-8 text-center">Loading submission details...</div>;
-  if (error) return <div className="py-8 text-red-600">Error: {error.message}</div>;
+  if (isLoading)
+    return (
+      <div style={{ padding: '32px 0', textAlign: 'center' }}>Loading submission details...</div>
+    );
+  if (error)
+    return (
+      <div style={{ padding: '32px 0' }}>
+        <Alert message="Error" description={error.message} type="error" showIcon />
+      </div>
+    );
   if (!submission)
     return (
-      <div className="py-8 text-center text-gray-500">
-        提出が見つからないか、閲覧権限がありません。
+      <div style={{ padding: '32px 0', textAlign: 'center' }}>
+        <Empty description="提出が見つからないか、閲覧権限がありません。" />
       </div>
     );
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'AC':
-        return 'text-green-600 font-bold';
+        return 'success';
       case 'WA':
-        return 'text-yellow-600 font-bold';
+        return 'warning';
       case 'RE':
-        return 'text-red-600 font-bold';
+        return 'error';
       case 'TLE':
-        return 'text-orange-600 font-bold';
+        return 'orange';
+      case 'WJ':
+        return 'default';
       default:
-        return 'text-gray-600';
+        return 'default';
+    }
+  };
+
+  const getStatusHexColor = (status: string) => {
+    switch (status) {
+      case 'AC':
+        return '#52c41a';
+      case 'WA':
+        return '#faad14';
+      case 'RE':
+        return '#f5222d';
+      case 'TLE':
+        return '#fa8c16';
+      default:
+        return '#8c8c8c';
     }
   };
 
@@ -50,140 +128,258 @@ export default function SubmissionDetailPage() {
   };
 
   return (
-    <div className="max-w-5xl space-y-8 pb-12">
-      <div className="flex items-center justify-between border-b pb-4">
-        <h2 className="text-2xl font-bold text-gray-900">提出詳細 #{submission.id}</h2>
-        <div className="flex items-center gap-4">
-          <Tag
-            color={
-              submission.status === 'AC'
-                ? 'success'
-                : submission.status === 'WJ'
-                  ? 'default'
-                  : 'error'
-            }
-            className="px-3 py-1 text-sm font-bold"
-          >
-            {submission.status}
-          </Tag>
-          <div className="text-sm text-gray-500">
-            提出時刻: {new Date(submission.submittedAt).toLocaleString()}
-          </div>
-        </div>
-      </div>
+    <div style={{ maxWidth: 1024, margin: '0 auto', paddingBottom: 48 }}>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+        <Col>
+          <Title level={2} style={{ margin: 0 }}>
+            提出詳細 #{submission.id}
+          </Title>
+        </Col>
+      </Row>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">問題</span>
-          <span className="text-lg font-medium">{submission.problem.title}</span>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">言語</span>
-          <span className="text-lg font-medium">{submission.language.name}</span>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">ステータス</span>
-          <div className={`text-lg font-bold ${getStatusColor(submission.status)}`}>
-            {submission.status}
-          </div>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <span className="mb-1 block text-xs font-bold text-gray-500 uppercase">スコア</span>
-          <span className="font-mono text-2xl font-bold text-blue-600">
-            {submission.score !== null ? submission.score : '-'}
-          </span>
-          <span className="ml-2 text-sm text-gray-400">({submission.codeLength} bytes)</span>
-        </div>
+      <div style={{ marginBottom: 32 }}>
+        <Descriptions bordered column={1} size="small">
+          <Descriptions.Item label="提出者">
+            <Space>
+              <Avatar
+                size="small"
+                src={submission.user.image}
+                icon={!submission.user.image && <UserOutlined />}
+              />
+              <Text>{submission.user.name || 'Unknown'}</Text>
+            </Space>
+          </Descriptions.Item>
+          <Descriptions.Item label="提出時刻">
+            <Text>{dayjs(submission.submittedAt).format('YYYY-MM-DD HH:mm:ss')}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="問題">
+            <Link href={`/contest/${contestId}/problem/${submission.problem.id}`}>
+              <Text underline>{submission.problem.title}</Text>
+            </Link>
+          </Descriptions.Item>
+          <Descriptions.Item label="言語">
+            <Text>{submission.language.name}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="バイト数">
+            <Text>{submission.codeLength} bytes</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="ステータス">
+            <Tag color={getStatusColor(submission.status)} style={{ fontWeight: 'bold' }}>
+              {submission.status}
+            </Tag>
+          </Descriptions.Item>
+          <Descriptions.Item label="スコア">
+            <Text strong style={{ fontSize: 20, color: '#1677ff', fontFamily: 'monospace' }}>
+              {submission.score !== null ? submission.score : '-'}
+            </Text>
+          </Descriptions.Item>
+        </Descriptions>
       </div>
 
       {submission.message && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800">
-          <div className="mb-1 flex items-center gap-2 font-bold">
-            <span className="text-lg">Result Summary</span>
-          </div>
-          <p className="text-sm whitespace-pre-wrap">{submission.message}</p>
-        </div>
+        <Alert
+          message="Result Summary"
+          description={<div style={{ whiteSpace: 'pre-wrap' }}>{submission.message}</div>}
+          type="info"
+          showIcon
+          style={{ marginBottom: 32 }}
+        />
       )}
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">ソースコード</h3>
-          <Button icon={<DownloadOutlined />} onClick={handleDownload}>
-            Download Code
-          </Button>
-        </div>
+      <div style={{ marginBottom: 32 }}>
+        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+          <Col>
+            <Title level={4} style={{ margin: 0 }}>
+              ソースコード
+            </Title>
+          </Col>
+          <Col>
+            <Space>
+              <CopyButton text={submission.codeText || ''} label="Code" showText />
+              <Button icon={<DownloadOutlined />} onClick={handleDownload}>
+                Download Code
+              </Button>
+            </Space>
+          </Col>
+        </Row>
 
         {submission.isBinary ? (
-          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-12 text-center">
-            <FileUnknownOutlined className="mb-4 text-4xl text-gray-400" />
-            <div className="font-medium text-gray-600">Binary Data Detected</div>
-            <p className="mt-1 text-sm text-gray-400">
+          <Card style={{ textAlign: 'center', backgroundColor: '#fafafa', borderStyle: 'dashed' }}>
+            <FileUnknownOutlined style={{ fontSize: 48, color: '#bfbfbf', marginBottom: 16 }} />
+            <Title level={5}>Binary Data Detected</Title>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
               This file contains non-UTF-8 characters and cannot be displayed as text.
-            </p>
-            <Button className="mt-4" onClick={handleDownload}>
+            </Text>
+            <Button type="primary" onClick={handleDownload}>
               Download to View
             </Button>
-          </div>
+          </Card>
         ) : (
-          <pre className="max-h-[500px] overflow-x-auto overflow-y-auto rounded-lg bg-gray-900 p-6 font-mono text-sm leading-relaxed text-gray-100 shadow-inner">
+          <pre
+            style={{
+              maxHeight: 500,
+              overflow: 'auto',
+              padding: 24,
+              borderRadius: 8,
+              backgroundColor: '#001529',
+              color: '#e6f4ff',
+              fontFamily: 'monospace',
+              fontSize: '14px',
+              lineHeight: '1.6',
+              margin: 0,
+            }}
+          >
             {submission.codeText}
           </pre>
         )}
       </div>
 
       <div>
-        <h3 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">
+        <Title level={4} style={{ marginBottom: 16 }}>
           実行結果 (テストケース)
-        </h3>
-        <div className="space-y-4">
+        </Title>
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
           {submission.executions.map((exec: any, idx: number) => (
-            <div key={idx} className="overflow-hidden rounded-lg border bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-2 text-sm">
-                <div className="font-medium text-gray-700">
-                  Case #{idx + 1}{' '}
-                  {exec.testcase.isSample && (
-                    <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700">
-                      Sample
-                    </span>
-                  )}
-                </div>
-                <div className={getStatusColor(exec.status)}>
+            <Card
+              key={idx}
+              size="small"
+              title={
+                <Space>
+                  <Text strong>Case #{idx + 1}</Text>
+                  {exec.testcase.isSample && <Tag color="blue">Sample</Tag>}
+                </Space>
+              }
+              extra={
+                <Tag color={getStatusColor(exec.status)} style={{ fontWeight: 'bold' }}>
                   {exec.status} ({exec.executionTime} ms)
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4 p-4">
+                </Tag>
+              }
+              styles={{ body: { padding: 16 }, header: { backgroundColor: '#fafafa' } }}
+            >
+              <Space direction="vertical" style={{ width: '100%' }} size="middle">
                 {exec.message && (
-                  <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
-                    <span className="mr-2 font-bold uppercase">Checker Message:</span>
-                    {exec.message}
-                  </div>
+                  <Alert
+                    message={
+                      <span>
+                        <Text strong>Checker Message:</Text> {exec.message}
+                      </span>
+                    }
+                    type="warning"
+                    showIcon={false}
+                    style={{ fontSize: '12px' }}
+                  />
                 )}
+
                 {exec.testcase.input && (
                   <div>
-                    <span className="text-xs font-bold text-gray-400 uppercase">Input</span>
-                    <pre className="mt-1 max-h-32 overflow-y-auto rounded border bg-gray-50 p-2 font-mono text-xs">
+                    <Row justify="space-between" align="middle" style={{ marginBottom: 4 }}>
+                      <Col>
+                        <Text
+                          type="secondary"
+                          strong
+                          style={{ fontSize: '12px', textTransform: 'uppercase' }}
+                        >
+                          Input
+                        </Text>
+                      </Col>
+                      <Col>
+                        <CopyButton text={exec.testcase.input} label={`Case #${idx + 1} Input`} />
+                      </Col>
+                    </Row>
+                    <pre
+                      style={{
+                        maxHeight: 128,
+                        overflow: 'auto',
+                        padding: 8,
+                        backgroundColor: '#f5f5f5',
+                        border: '1px solid #d9d9d9',
+                        borderRadius: 4,
+                        margin: 0,
+                        fontSize: '12px',
+                        fontFamily: 'monospace',
+                      }}
+                    >
                       {exec.testcase.input}
                     </pre>
                   </div>
                 )}
+
                 <div>
-                  <span className="text-xs font-bold text-gray-400 uppercase">Stdout</span>
-                  <pre className="mt-1 max-h-32 overflow-y-auto rounded border bg-gray-50 p-2 font-mono text-xs whitespace-pre-wrap">
-                    {exec.stdout || <span className="italic opacity-50">(empty)</span>}
+                  <Row justify="space-between" align="middle" style={{ marginBottom: 4 }}>
+                    <Col>
+                      <Text
+                        type="secondary"
+                        strong
+                        style={{ fontSize: '12px', textTransform: 'uppercase' }}
+                      >
+                        Stdout
+                      </Text>
+                    </Col>
+                    <Col>
+                      <CopyButton text={exec.stdout || ''} label={`Case #${idx + 1} Stdout`} />
+                    </Col>
+                  </Row>
+                  <pre
+                    style={{
+                      maxHeight: 128,
+                      overflow: 'auto',
+                      padding: 8,
+                      backgroundColor: '#f5f5f5',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 4,
+                      margin: 0,
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {exec.stdout || (
+                      <Text italic type="secondary">
+                        (empty)
+                      </Text>
+                    )}
                   </pre>
                 </div>
+
                 {exec.stderr && (
                   <div>
-                    <span className="text-xs font-bold text-red-400 uppercase">Stderr</span>
-                    <pre className="mt-1 max-h-32 overflow-y-auto rounded border border-red-100 bg-red-50 p-2 font-mono text-xs whitespace-pre-wrap text-red-700">
+                    <Row justify="space-between" align="middle" style={{ marginBottom: 4 }}>
+                      <Col>
+                        <Text
+                          type="danger"
+                          strong
+                          style={{ fontSize: '12px', textTransform: 'uppercase' }}
+                        >
+                          Stderr
+                        </Text>
+                      </Col>
+                      <Col>
+                        <CopyButton text={exec.stderr} label={`Case #${idx + 1} Stderr`} />
+                      </Col>
+                    </Row>
+                    <pre
+                      style={{
+                        maxHeight: 128,
+                        overflow: 'auto',
+                        padding: 8,
+                        backgroundColor: '#fff2f0',
+                        border: '1px solid #ffccc7',
+                        borderRadius: 4,
+                        margin: 0,
+                        fontSize: '12px',
+                        fontFamily: 'monospace',
+                        whiteSpace: 'pre-wrap',
+                        color: '#ff4d4f',
+                      }}
+                    >
                       {exec.stderr}
                     </pre>
                   </div>
                 )}
-              </div>
-            </div>
+              </Space>
+            </Card>
           ))}
-        </div>
+        </Space>
       </div>
     </div>
   );
