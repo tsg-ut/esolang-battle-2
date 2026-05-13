@@ -14,7 +14,7 @@
     "@esolang-battle/common": "workspace:*",
     "@esolang-battle/db": "workspace:*",
     "bullmq": "^5.74.1",
-    "dockerode": "^4.0.10",
+    "dockerode": "^5.0.0",
     "dotenv": "^17.4.2",
     "ioredis": "^5.10.1",
     "pg": "^8.20.0",
