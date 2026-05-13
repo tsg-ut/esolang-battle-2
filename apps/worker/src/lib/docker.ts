@@ -15,7 +15,7 @@ export type TestCaseWithIO = {
   input: string;
 };
 
-const DEFAULT_TIMEOUT_MS = 10000; // 10s
+const DEFAULT_TIMEOUT_MS = 20000; // 20s
 const MEMORY_LIMIT = 512 * 1024 * 1024; // 512MB
 const BATCH_MEMORY_LIMIT = 1024 * 1024 * 1024; // 1GB
 
