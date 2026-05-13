@@ -1,7 +1,7 @@
 import { getAvatarUrl } from '@/utils/user';
 import { z } from 'zod';
 
-import { contestIdSchema, contestSummarySchema } from '@esolang-battle/common';
+import { boardSummarySchema, contestIdSchema, contestSummarySchema } from '@esolang-battle/common';
 
 import { ensureContestAccess } from '../function/contest';
 import { getBoard } from '../function/getBoard';
@@ -33,10 +33,21 @@ export const contestRouter = router({
         isPublic: c.isPublic,
       }));
     }),
-  getBoard: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
-    await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
-    return await getBoard(ctx.prisma, input.contestId);
-  }),
+  getBoard: publicProcedure
+    .meta({
+      openapi: {
+        method: 'GET',
+        path: '/contest/{contestId}/board',
+        summary: 'コンテストボード情報の取得',
+        description: '特定のコンテストのボード設定と現在の状態を取得します。',
+      },
+    })
+    .input(contestIdSchema)
+    .output(boardSummarySchema.nullable())
+    .query(async ({ ctx, input }) => {
+      await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
+      return await getBoard(ctx.prisma, input.contestId);
+    }),
   getContest: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
     await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
     const contest = await ctx.prisma.contest.findUnique({

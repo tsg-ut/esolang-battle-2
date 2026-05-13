@@ -79,6 +79,7 @@ export const submissionRouter = router({
       const results = await findSubmissions(ctx.prisma, filter);
       return results.map((s) => ({
         ...s,
+        submittedAt: s.submittedAt.toISOString(),
         user: {
           ...s.user,
           image: getAvatarUrl(s.user.id, !!s.user.image),

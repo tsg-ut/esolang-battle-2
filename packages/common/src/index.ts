@@ -50,7 +50,7 @@ export const contestSummarySchema = z.object({
 export const submissionSummarySchema = z.object({
   id: z.number(),
   codeLength: z.number(),
-  submittedAt: z.date(),
+  submittedAt: z.string(),
   status: z.enum(['AC', 'WA', 'TLE', 'RE', 'WJ']),
   score: z.number().nullable(),
   message: z.string().nullable(),
@@ -79,6 +79,15 @@ export const submissionSummarySchema = z.object({
     id: z.number(),
     name: z.string(),
   }),
+});
+
+export const boardSummarySchema = z.object({
+  id: z.number(),
+  contestId: z.number(),
+  type: z.string(),
+  config: z.any(),
+  state: z.any(),
+  lastUpdated: z.string(),
 });
 
 export const testCodeSchema = z.object({
