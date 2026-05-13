@@ -75,8 +75,10 @@ async function extractTar(stream: any): Promise<Record<string, string>> {
 }
 
 /**
- * コンテナの共通セキュリティ設定
+ * コンテナの設定 セキュリティなど
  */
+const WORKER_LABEL = { 'com.esolang-battle.container-type': 'worker-task' };
+
 const getHostConfig = (memoryLimit: number): Docker.HostConfig => ({
   Memory: memoryLimit,
   MemorySwap: memoryLimit,
@@ -86,6 +88,29 @@ const getHostConfig = (memoryLimit: number): Docker.HostConfig => ({
   ],
   NetworkMode: 'none',
 });
+
+/**
+ * 以前のセッションで残ってしまったコンテナを掃除する
+ */
+export async function cleanupOldContainers() {
+  try {
+    const containers = await docker.listContainers({
+      all: true,
+      filters: JSON.stringify({ label: ['com.esolang-battle.container-type=worker-task'] }),
+    });
+    for (const containerInfo of containers) {
+      console.log(`Cleaning up old container: ${containerInfo.Id}`);
+      try {
+        const container = docker.getContainer(containerInfo.Id);
+        await container.remove({ force: true });
+      } catch (err) {
+        console.error(`Failed to remove container ${containerInfo.Id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to list containers for cleanup:', err);
+  }
+}
 
 /**
  * 実行エンジンのコア: コンテナ内で複数の入力を処理する
@@ -115,13 +140,15 @@ async function runExecutionBatch(
 
   files['runner.sh'] = scriptLines.join('\n');
 
+  let container: Docker.Container | undefined;
   try {
     // 1. コンテナ作成
     console.log(`Creating container with image: ${image}`);
-    const container = await docker.createContainer({
+    container = await docker.createContainer({
       Image: image,
       Cmd: ['sh', '/tmp/runner.sh'],
       HostConfig: getHostConfig(memoryLimit),
+      Labels: WORKER_LABEL,
     });
 
     // 2. ファイルを送り込む (/tmp に展開)
@@ -147,10 +174,6 @@ async function runExecutionBatch(
     // 5. 結果回収 (/tmp から取得)
     const archiveStream = await container.getArchive({ path: '/tmp' });
     const outputFiles = await extractTar(archiveStream);
-
-    await container
-      .remove({ force: true })
-      .catch((err) => console.error('Failed to remove container:', err));
 
     const results: Record<number, DockerResult> = {};
     for (const tc of testCases) {
@@ -198,6 +221,12 @@ async function runExecutionBatch(
   } catch (err) {
     console.error('Execution error:', err);
     throw err;
+  } finally {
+    if (container) {
+      await container
+        .remove({ force: true })
+        .catch((err) => console.error('Failed to remove container:', err));
+    }
   }
 }
 
@@ -227,7 +256,7 @@ export async function runAllTestCasesInSingleContainer(
   image: string,
   code: string | Buffer,
   testCases: TestCaseWithIO[],
-  timeoutMs: number = DEFAULT_TIMEOUT_MS * 2
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
 ): Promise<Record<number, DockerResult>> {
   return await runExecutionBatch(image, code, testCases, timeoutMs, BATCH_MEMORY_LIMIT);
 }
@@ -246,12 +275,14 @@ export async function runJudgeScript(
     'input.json': JSON.stringify(inputJson),
   };
 
+  let container: Docker.Container | undefined;
   try {
     const tarBuffer = await createTar(files);
-    const container = await docker.createContainer({
+    container = await docker.createContainer({
       Image: image,
       Cmd: ['sh', '-c', 'script /tmp/judge.src < /tmp/input.json'],
       HostConfig: getHostConfig(MEMORY_LIMIT),
+      Labels: WORKER_LABEL,
     });
 
     await container.putArchive(tarBuffer, { path: '/tmp' });
@@ -272,10 +303,6 @@ export async function runJudgeScript(
     const logs = await container.logs({ stdout: true, stderr: true });
     const output = decodeDockerLogs(logs);
 
-    await container
-      .remove({ force: true })
-      .catch((err) => console.error('Failed to remove judge container:', err));
-
     if (isTimeout) throw new Error('Judge script timeout');
 
     try {
@@ -287,6 +314,12 @@ export async function runJudgeScript(
   } catch (err) {
     console.error('Judge error:', err);
     throw err;
+  } finally {
+    if (container) {
+      await container
+        .remove({ force: true })
+        .catch((err) => console.error('Failed to remove judge container:', err));
+    }
   }
 }
 
