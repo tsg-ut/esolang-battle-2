@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:17-alpine
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
@@ -16,7 +16,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    restart: always
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -38,8 +38,9 @@ services:
     build:
       context: .
       target: web
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3000:3000" # might be overridden in docker-compose.override.yml
     depends_on:
       db:
         condition: service_healthy
@@ -60,6 +61,28 @@ services:
     build:
       context: .
       target: worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DATABASE_URL: ${DATABASE_URL_INTERNAL}
+      REDIS_HOST: ${REDIS_HOST_INTERNAL}
+      REDIS_PORT: ${REDIS_PORT_INTERNAL:-6379}
+      DOCKER_HOST: unix:///var/run/docker.sock
+
+  # You can add more worker instances if needed for load balancing
+  worker2:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
