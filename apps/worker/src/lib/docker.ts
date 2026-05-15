@@ -60,7 +60,8 @@ async function extractTar(stream: any): Promise<Record<string, string>> {
         }
       });
       stream.on('end', () => {
-        files[fileName] = Buffer.concat(chunks).toString('utf8');
+        const content = Buffer.concat(chunks).toString('utf8').replace(/\0/g, '');
+        files[fileName] = content;
         if (currentSize >= MAX_FILE_SIZE) {
           files[fileName] += '\n... (output truncated)';
         }
@@ -336,7 +337,7 @@ function decodeDockerLogs(buffer: Buffer): { stdout: string; stderr: string } {
     const type = buffer.readUInt8(offset);
     const size = buffer.readUInt32BE(offset + 4);
     const payloadBuffer = buffer.slice(offset + 8, offset + 8 + size);
-    const payload = payloadBuffer.toString('utf8');
+    const payload = payloadBuffer.toString('utf8').replace(/\0/g, '');
 
     if (type === 1) {
       if (stdout.length < MAX_LOG_SIZE) stdout += payload;
