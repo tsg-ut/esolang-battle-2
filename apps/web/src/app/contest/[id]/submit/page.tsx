@@ -59,7 +59,11 @@ function SubmitForm() {
     }
   }, [problems, searchParams, selectedProblemId]);
 
-  const handleSubmit = async (data: { code: string; isBase64: boolean }) => {
+  const handleSubmit = async (data: {
+    code: string;
+    isBase64: boolean;
+    fileName: string | null;
+  }) => {
     if (!isLoggedIn) return;
     if (!selectedProblemId) {
       message.error('問題を選択してください');

@@ -25,6 +25,8 @@ export default function CodeTestPage() {
 
   const [selectedLanguageId, setSelectedLanguageId] = useState<string>('');
   const [testCodeText, setTestCodeText] = useState('');
+  const [isBase64, setIsBase64] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [stdinText, setStdinText] = useState('');
   const [result, setResult] = useState<any>(null);
 
@@ -38,6 +40,8 @@ export default function CodeTestPage() {
         const data = JSON.parse(saved);
         if (data.languageId) setSelectedLanguageId(data.languageId);
         if (data.code) setTestCodeText(data.code);
+        if (data.isBase64 !== undefined) setIsBase64(data.isBase64);
+        if (data.fileName !== undefined) setFileName(data.fileName);
         if (data.stdin) setStdinText(data.stdin);
         if (data.result) setResult(data.result);
       } catch (e) {
@@ -51,11 +55,13 @@ export default function CodeTestPage() {
     const data = {
       languageId: selectedLanguageId,
       code: testCodeText,
+      isBase64,
+      fileName,
       stdin: stdinText,
       result,
     };
     localStorage.setItem(storageKey, JSON.stringify(data));
-  }, [selectedLanguageId, testCodeText, stdinText, result, storageKey]);
+  }, [selectedLanguageId, testCodeText, isBase64, fileName, stdinText, result, storageKey]);
 
   useEffect(() => {
     if (languages && languages.length > 0 && !selectedLanguageId) {
@@ -66,7 +72,11 @@ export default function CodeTestPage() {
     }
   }, [languages, selectedLanguageId, storageKey]);
 
-  const handleRunTest = async (data: { code: string; isBase64: boolean }) => {
+  const handleRunTest = async (data: {
+    code: string;
+    isBase64: boolean;
+    fileName: string | null;
+  }) => {
     try {
       const res = await testCodeMutation.mutateAsync({
         code: data.code,
@@ -76,6 +86,8 @@ export default function CodeTestPage() {
       });
       setResult(res);
       setTestCodeText(data.code); // 状態を同期
+      setIsBase64(data.isBase64);
+      setFileName(data.fileName);
     } catch (err) {
       console.error(err);
     }
@@ -83,12 +95,16 @@ export default function CodeTestPage() {
 
   const handleReset = () => {
     setTestCodeText('');
+    setIsBase64(false);
+    setFileName(null);
     setStdinText('');
     setResult(null);
     testCodeMutation.reset();
     const data = {
       languageId: selectedLanguageId,
       code: '',
+      isBase64: false,
+      fileName: null,
       stdin: '',
       result: null,
     };
@@ -115,6 +131,8 @@ export default function CodeTestPage() {
             submitLoading={testCodeMutation.isPending}
             submitText="テスト実行"
             initialCode={testCodeText}
+            initialIsBase64={isBase64}
+            initialFileName={fileName}
             afterCodeFields={
               <div>
                 <label

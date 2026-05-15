@@ -14,10 +14,12 @@ interface CodeSubmitFormProps {
   languages: Language[];
   selectedLanguageId: string;
   onLanguageChange: (id: string) => void;
-  onSubmit: (data: { code: string; isBase64: boolean }) => Promise<void>;
+  onSubmit: (data: { code: string; isBase64: boolean; fileName: string | null }) => Promise<void>;
   submitLoading: boolean;
   submitText: string;
   initialCode?: string;
+  initialIsBase64?: boolean;
+  initialFileName?: string | null;
   extraFields?: React.ReactNode;
   afterCodeFields?: React.ReactNode;
   footerActions?: React.ReactNode;
@@ -32,6 +34,8 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
   submitLoading,
   submitText,
   initialCode = '',
+  initialIsBase64 = false,
+  initialFileName = null,
   extraFields,
   afterCodeFields,
   footerActions,
@@ -39,19 +43,15 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
 }) => {
   const { message } = App.useApp();
   const [code, setCode] = useState(initialCode);
-  const [isBase64, setIsBase64] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [isBase64, setIsBase64] = useState(initialIsBase64);
+  const [fileName, setFileName] = useState<string | null>(initialFileName);
 
   // 外部からの初期コード反映 (Code Test等でのリセット用)
   useEffect(() => {
-    if (initialCode === '') {
-      setCode('');
-      setIsBase64(false);
-      setFileName(null);
-    } else {
-      setCode(initialCode);
-    }
-  }, [initialCode]);
+    setCode(initialCode);
+    setIsBase64(initialIsBase64);
+    setFileName(initialFileName);
+  }, [initialCode, initialIsBase64, initialFileName]);
 
   const handleFileUpload = (file: File) => {
     const MAX_SIZE = 1 * 1024 * 1024; // 1MB
@@ -90,7 +90,7 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
       message.error('言語を選択してください');
       return;
     }
-    await onSubmit({ code, isBase64 });
+    await onSubmit({ code, isBase64, fileName });
   };
 
   return (

@@ -158,11 +158,7 @@ export const submissionRouter = router({
       };
     }),
   testCode: publicProcedure.input(testCodeSchema).mutation(async ({ input }) => {
-    const codeData = input.isBase64 ? Buffer.from(input.code, 'base64') : input.code;
-    const job = await testQueue.add('runTest', {
-      ...input,
-      code: codeData,
-    });
+    const job = await testQueue.add('runTest', input);
     return await job.waitUntilFinished(testQueueEvents);
   }),
   getSubmittableLanguageIdsForTeam: protectedProcedure

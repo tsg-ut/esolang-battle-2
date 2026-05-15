@@ -60,7 +60,11 @@ export default function ProblemDetailPage() {
     }
   }, [problem, selectedLanguageId]);
 
-  const handleSubmit = async (data: { code: string; isBase64: boolean }) => {
+  const handleSubmit = async (data: {
+    code: string;
+    isBase64: boolean;
+    fileName: string | null;
+  }) => {
     if (!isLoggedIn) return;
     try {
       await submitMutation.mutateAsync({
