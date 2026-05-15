@@ -18,6 +18,12 @@ export default function TeamCreate() {
     optionValue: 'id',
   });
 
+  const { selectProps: userSelectProps } = useSelect({
+    resource: 'users',
+    optionLabel: (item) => `${(item as any).name || 'No Name'} (${(item as any).id})`,
+    optionValue: 'id',
+  });
+
   useEffect(() => {
     if (contestId) {
       form.setFieldsValue({ contestId: Number(contestId) });
@@ -28,10 +34,32 @@ export default function TeamCreate() {
     <Create saveButtonProps={saveButtonProps}>
       <Form {...formProps} form={form} layout="vertical" initialValues={{ color: '#1677ff' }}>
         <Form.Item label="Contest" name="contestId" rules={[{ required: true }]}>
-          <Select {...contestSelectProps} disabled={!!contestId} />
+          <Select
+            {...contestSelectProps}
+            disabled={!!contestId}
+            showSearch
+            filterOption={(input, option) =>
+              String(option?.label ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          />
         </Form.Item>
         <Form.Item label="Team Name" name="name" rules={[{ required: true }]}>
           <Input placeholder="e.g. Team Blue" />
+        </Form.Item>
+        <Form.Item label="Members" name="userIds">
+          <Select
+            {...userSelectProps}
+            mode="multiple"
+            placeholder="Select users"
+            showSearch
+            filterOption={(input, option) =>
+              String(option?.label ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          />
         </Form.Item>
         <Form.Item label="Color" name="color" rules={[{ required: true }]} trigger="onChange">
           <ColorPicker

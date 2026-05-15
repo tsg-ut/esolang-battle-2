@@ -44,8 +44,19 @@ export default function UserCreate() {
         <Form.Item label="Is Admin" name="isAdmin" valuePropName="checked">
           <Checkbox>Grant administrator privileges</Checkbox>
         </Form.Item>
-        <Form.Item label="Initial Team" name="teamId">
-          <Select {...teamSelectProps} placeholder="Select an optional initial team" allowClear />
+        <Form.Item label="Initial Teams" name="teamIds">
+          <Select
+            {...teamSelectProps}
+            mode="multiple"
+            placeholder="Select optional initial teams"
+            allowClear
+            showSearch
+            filterOption={(input, option) =>
+              String(option?.label ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          />
         </Form.Item>
       </Form>
     </Create>

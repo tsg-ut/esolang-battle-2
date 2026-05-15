@@ -15,7 +15,14 @@ export const trpcDataProvider = (): DataProvider => ({
     const r = resource.toLowerCase();
     let data: any[] = [];
 
-    const getFilterValue = (field: string) => filters?.find((f: any) => f.field === field)?.value;
+    const getFilterValue = (field: string) => {
+      const f = filters?.find((f: any) => f.field === field);
+      if (!f) return undefined;
+      if (typeof f.value === 'object' && f.value !== null && 'value' in f.value) {
+        return f.value.value;
+      }
+      return f.value;
+    };
 
     switch (r) {
       case 'users':
@@ -25,7 +32,12 @@ export const trpcDataProvider = (): DataProvider => ({
         data = await client.adminGetContests.query();
         break;
       case 'teams':
-        data = await client.adminGetTeams.query();
+        {
+          const contestId = getFilterValue('contestId');
+          data = await client.adminGetTeams.query({
+            contestId: contestId ? Number(contestId) : undefined,
+          });
+        }
         break;
       case 'languages':
         data = await client.adminGetLanguages.query();
@@ -158,10 +170,10 @@ export const trpcDataProvider = (): DataProvider => ({
           password: v.password,
           isAdmin: !!v.isAdmin,
         });
-        if (v.teamId) {
+        if (v.teamIds) {
           await client.adminUpdateUserTeam.mutate({
             userId: data.id,
-            teamId: Number(v.teamId),
+            teamIds: v.teamIds.map(Number),
           });
         }
         break;
@@ -210,10 +222,10 @@ export const trpcDataProvider = (): DataProvider => ({
           password: v.password || undefined,
         });
         // 2. チーム情報の更新（もし存在すれば）
-        if (v.teamId !== undefined) {
+        if (v.teamIds !== undefined) {
           await client.adminUpdateUserTeam.mutate({
             userId: String(id),
-            teamId: v.teamId ? Number(v.teamId) : null,
+            teamIds: v.teamIds.map(Number),
           });
         }
         break;

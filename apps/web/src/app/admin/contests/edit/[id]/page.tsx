@@ -346,10 +346,18 @@ function SubmissionSubList({ contestId }: { contestId: number }) {
         <Form form={editForm} layout="vertical" onFinish={handleUpdate}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <Form.Item label="Problem" name="problemId" rules={[{ required: true }]}>
-              <Select options={problems?.map((p) => ({ label: p.title, value: p.id }))} />
+              <Select
+                showSearch
+                optionFilterProp="label"
+                options={problems?.map((p) => ({ label: p.title, value: p.id }))}
+              />
             </Form.Item>
             <Form.Item label="Language" name="languageId" rules={[{ required: true }]}>
-              <Select options={languages?.map((l) => ({ label: l.name, value: l.id }))} />
+              <Select
+                showSearch
+                optionFilterProp="label"
+                options={languages?.map((l) => ({ label: l.name, value: l.id }))}
+              />
             </Form.Item>
           </div>
           <Form.Item label="Score" name="score">
@@ -605,6 +613,7 @@ function TeamSubList({ contestId }: { contestId: number }) {
         }}
       >
         <Table.Column dataIndex="id" title="ID" />
+        <Table.Column dataIndex="name" title="Name" />
         <Table.Column
           dataIndex="color"
           title="Color"

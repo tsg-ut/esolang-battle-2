@@ -14,21 +14,29 @@ export async function findTeamById(prisma: PrismaClient, id: number) {
 
 export async function createTeam(
   prisma: PrismaClient,
-  data: { name?: string; color: string; contestId: number }
+  data: { name?: string; color: string; contestId: number; userIds?: string[] }
 ) {
+  const { userIds, ...rest } = data;
   return await prisma.team.create({
-    data,
+    data: {
+      ...rest,
+      users: userIds ? { connect: userIds.map((id) => ({ id })) } : undefined,
+    },
   });
 }
 
 export async function updateTeam(
   prisma: PrismaClient,
   id: number,
-  data: { name?: string; color?: string; contestId?: number }
+  data: { name?: string; color?: string; contestId?: number; userIds?: string[] }
 ) {
+  const { userIds, ...rest } = data;
   return await prisma.team.update({
     where: { id },
-    data,
+    data: {
+      ...rest,
+      users: userIds ? { set: userIds.map((id) => ({ id })) } : undefined,
+    },
   });
 }
 

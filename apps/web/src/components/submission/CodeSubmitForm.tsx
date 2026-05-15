@@ -111,7 +111,9 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
             fieldNames={{ label: 'name', value: 'id' }}
             options={languages.map((l) => ({ id: String(l.id), name: l.name }))}
             filterOption={(input, option) =>
-              (option?.name ?? '').toLowerCase().includes(input.toLowerCase())
+              String(option?.name ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
             }
           />
         </div>

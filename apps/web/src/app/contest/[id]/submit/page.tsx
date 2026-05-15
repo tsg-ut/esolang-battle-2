@@ -111,7 +111,9 @@ function SubmitForm() {
                 label: `${p.title} (ID ${p.id})`,
               }))}
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                String(option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
             />
           </div>

@@ -17,19 +17,6 @@ export default function UserEdit() {
 
   const { data: user } = trpc.adminGetUser.useQuery({ id: userId ?? '' }, { enabled: !!userId });
 
-  const initialTeamId = user?.teams && user.teams.length > 0 ? user.teams[0].id : undefined;
-
-  // 初期値のセット
-  useEffect(() => {
-    if (user) {
-      form.setFieldsValue({
-        name: user.name,
-        isAdmin: user.isAdmin,
-        teamId: initialTeamId,
-      });
-    }
-  }, [user, initialTeamId, form]);
-
   const currentValues = Form.useWatch([], form) as any;
 
   const isChanged =
@@ -37,7 +24,8 @@ export default function UserEdit() {
     currentValues &&
     (currentValues.name !== user.name ||
       currentValues.isAdmin !== user.isAdmin ||
-      Number(currentValues.teamId) !== Number(initialTeamId) ||
+      JSON.stringify((currentValues.teamIds || []).map(Number).sort()) !==
+        JSON.stringify((user.teamIds || []).map(Number).sort()) ||
       !!currentValues.password); // パスワードが入力されていれば変更ありとみなす
 
   // For team selection
@@ -69,8 +57,19 @@ export default function UserEdit() {
         <Form.Item label="Is Admin" name="isAdmin" valuePropName="checked">
           <Checkbox>Grant administrator privileges</Checkbox>
         </Form.Item>
-        <Form.Item label="Teams (Main Team)" name="teamId">
-          <Select {...teamSelectProps} placeholder="Select a team to add/update" allowClear />
+        <Form.Item label="Teams" name="teamIds">
+          <Select
+            {...teamSelectProps}
+            mode="multiple"
+            placeholder="Select teams"
+            allowClear
+            showSearch
+            filterOption={(input, option) =>
+              String(option?.label ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          />
         </Form.Item>
       </Form>
     </Edit>

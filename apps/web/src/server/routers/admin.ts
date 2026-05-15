@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   BoardConfig,
   BoardState,
+  listInContestSchema,
   listProblemsSchema,
   updateUserTeamSchema,
   upsertContestSchema,
@@ -45,6 +46,7 @@ export const adminRouter = router({
         color: t.color,
         contestId: t.contestId,
       })),
+      teamIds: user.teams.map((t) => t.id),
     };
   }),
   adminCreateUser: adminProcedure
@@ -92,17 +94,17 @@ export const adminRouter = router({
   adminUpdateUserTeam: adminProcedure
     .input(updateUserTeamSchema)
     .mutation(async ({ ctx, input }) => {
-      const { userId, teamId } = input;
+      const { userId, teamIds } = input;
       const { findUserByIdWithTeams } = await import('@esolang-battle/db');
       const user = await findUserByIdWithTeams(ctx.prisma, userId);
       if (!user) throw new Error('User not found');
 
-      // 既存の所属を解除
+      // 既存の所属を解除し、新しいチームを設定
       await ctx.prisma.user.update({
         where: { id: userId },
         data: {
           teams: {
-            set: teamId ? [{ id: teamId }] : [],
+            set: teamIds.map((id) => ({ id })),
           },
         },
       });
@@ -150,25 +152,29 @@ export const adminRouter = router({
     }),
 
   // Teams
-  adminGetTeams: adminProcedure.query(async ({ ctx }) => {
-    const teams = await ctx.prisma.team.findMany({
-      orderBy: { id: 'asc' },
-      include: { contest: true },
-    });
-    return teams.map((t) => ({
-      ...t,
-      contestName: t.contest.name,
-    }));
-  }),
+  adminGetTeams: adminProcedure
+    .input(listInContestSchema.optional())
+    .query(async ({ ctx, input }) => {
+      const teams = await ctx.prisma.team.findMany({
+        where: input?.contestId ? { contestId: input.contestId } : {},
+        orderBy: { id: 'asc' },
+        include: { contest: true },
+      });
+      return teams.map((t) => ({
+        ...t,
+        contestName: t.contest.name,
+      }));
+    }),
   adminGetTeam: adminProcedure.input(z.object({ id: z.number() })).query(async ({ ctx, input }) => {
     const team = await ctx.prisma.team.findUnique({
       where: { id: input.id },
-      include: { contest: true },
+      include: { contest: true, users: true },
     });
     if (!team) throw new Error('Team not found');
     return {
       ...team,
       contestName: team.contest.name,
+      userIds: team.users.map((u) => u.id),
     };
   }),
   adminUpsertTeam: adminProcedure.input(upsertTeamSchema).mutation(async ({ ctx, input }) => {

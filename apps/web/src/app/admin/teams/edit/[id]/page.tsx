@@ -23,11 +23,18 @@ export default function TeamEdit() {
     currentValues &&
     (currentValues.name !== initialData.name ||
       currentValues.color !== initialData.color ||
-      Number(currentValues.contestId) !== Number(initialData.contestId));
+      Number(currentValues.contestId) !== Number(initialData.contestId) ||
+      JSON.stringify(currentValues.userIds) !== JSON.stringify(initialData.userIds));
 
   const { selectProps: contestSelectProps } = useSelect({
     resource: 'contests',
     optionLabel: (item) => `${(item as any).name}(#${(item as any).id})`,
+    optionValue: 'id',
+  });
+
+  const { selectProps: userSelectProps } = useSelect({
+    resource: 'users',
+    optionLabel: (item) => `${(item as any).name || 'No Name'} (${(item as any).id})`,
     optionValue: 'id',
   });
 
@@ -37,10 +44,31 @@ export default function TeamEdit() {
     >
       <Form {...formProps} layout="vertical">
         <Form.Item label="Contest" name="contestId" rules={[{ required: true }]}>
-          <Select {...contestSelectProps} />
+          <Select
+            {...contestSelectProps}
+            showSearch
+            filterOption={(input, option) =>
+              String(option?.label ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          />
         </Form.Item>
         <Form.Item label="Team Name" name="name" rules={[{ required: true }]}>
           <Input />
+        </Form.Item>
+        <Form.Item label="Members" name="userIds">
+          <Select
+            {...userSelectProps}
+            mode="multiple"
+            placeholder="Select users"
+            showSearch
+            filterOption={(input, option) =>
+              String(option?.label ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          />
         </Form.Item>
         <Form.Item
           label="Color"

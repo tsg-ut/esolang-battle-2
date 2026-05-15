@@ -23,9 +23,11 @@ export const submissionIdSchema = z.object({
   submissionId: z.number(),
 });
 
-export const listProblemsSchema = z.object({
+export const listInContestSchema = z.object({
   contestId: z.number().optional(),
 });
+
+export const listProblemsSchema = listInContestSchema;
 
 export const submissionFilterSchema = z.object({
   userId: z.string().optional(),
@@ -140,6 +142,7 @@ export const upsertTeamSchema = z.object({
   name: z.string().optional(),
   color: z.string(),
   contestId: z.number(),
+  userIds: z.array(z.string()).optional(),
 });
 
 export const upsertLanguageSchema = z.object({
@@ -160,7 +163,7 @@ export const upsertTestCaseSchema = z.object({
 
 export const updateUserTeamSchema = z.object({
   userId: z.string(),
-  teamId: z.number().nullable(),
+  teamIds: z.array(z.number()),
 });
 
 export type TeamInfo = {
