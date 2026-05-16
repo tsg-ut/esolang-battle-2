@@ -15,6 +15,7 @@ export default function ContestLayout({ children }: { children: React.ReactNode 
   const contestId = Number(params.id);
 
   const { data: contest, isLoading, error } = trpc.getContest.useQuery({ contestId });
+  const { data: problems } = trpc.listProblems.useQuery({ contestId });
 
   if (error) {
     return (
@@ -33,9 +34,14 @@ export default function ContestLayout({ children }: { children: React.ReactNode 
     );
   }
 
+  const problemPath =
+    problems?.length === 1
+      ? `/contest/${contestId}/problem/${problems[0].id}`
+      : `/contest/${contestId}/problem`;
+
   const tabs = [
     { id: 'board', label: '盤面', path: `/contest/${contestId}/board` },
-    { id: 'problem', label: '問題', path: `/contest/${contestId}/problem` },
+    { id: 'problem', label: '問題', path: problemPath },
     { id: 'standings', label: '順位表', path: `/contest/${contestId}/standings` },
     { id: 'submit', label: '新しい提出', path: `/contest/${contestId}/submit` },
     { id: 'submissions', label: '提出一覧', path: `/contest/${contestId}/submissions` },
@@ -76,7 +82,12 @@ export default function ContestLayout({ children }: { children: React.ReactNode 
         <div className="overflow-hidden rounded-lg bg-white shadow">
           <div className="flex border-b border-gray-200">
             {tabs.map((tab) => {
-              const isActive = pathname === tab.path;
+              const isActive =
+                tab.id === 'problem'
+                  ? pathname.startsWith(`/contest/${contestId}/problem`)
+                  : tab.id === 'submissions'
+                    ? pathname.startsWith(`/contest/${contestId}/submissions`)
+                    : pathname === tab.path;
               return (
                 <Link
                   key={tab.id}
