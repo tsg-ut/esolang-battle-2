@@ -22,7 +22,7 @@ export default function LandingPage() {
             難解プログラミング言語（Esolang）を駆使して陣地を奪い合う、
             究極のコードゴルフ・バトルプラットフォーム。
           </Paragraph>
-          <Space size="large">
+          <Space size="large" wrap className="justify-center">
             <Link href="/contests">
               <Button
                 type="primary"

@@ -62,7 +62,7 @@ export default function NavBar() {
         </Space>
       </Space>
 
-      <Space size="middle">
+      <Space size="middle" wrap className="justify-end">
         {isAdmin && (
           <Link href="/admin/users">
             <Button
