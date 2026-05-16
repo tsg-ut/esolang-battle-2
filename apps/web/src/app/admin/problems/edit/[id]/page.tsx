@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { BulkDeleteButton } from '@/components/admin/BulkDeleteButton';
 import { trpc } from '@/utils/trpc';
 import { EyeOutlined, SaveOutlined } from '@ant-design/icons';
@@ -14,8 +15,11 @@ import {
   App,
   Button,
   Card,
+  Col,
   Form,
   Input,
+  Row,
+  Segmented,
   Select,
   Space,
   Table,
@@ -29,6 +33,8 @@ export default function ProblemEdit() {
   const { formProps, saveButtonProps, form } = useForm({
     redirect: false,
   });
+
+  const [viewMode, setViewMode] = useState<'editor' | 'both' | 'preview'>('both');
 
   // フォームの変更監視
   const currentValues = Form.useWatch([], form) as any;
@@ -188,13 +194,53 @@ export default function ProblemEdit() {
               <Form.Item label="Title" name="title" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
-              <Form.Item
-                label="Problem Statement"
-                name="problemStatement"
-                rules={[{ required: true }]}
-              >
-                <Input.TextArea rows={15} />
-              </Form.Item>
+
+              <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <Segmented
+                  options={[
+                    { label: 'Editor', value: 'editor' },
+                    { label: 'Both', value: 'both' },
+                    { label: 'Preview', value: 'preview' },
+                  ]}
+                  value={viewMode}
+                  onChange={(value) => setViewMode(value as any)}
+                />
+              </div>
+
+              <Row gutter={24}>
+                <Col
+                  span={viewMode === 'both' ? 12 : 24}
+                  style={{ display: viewMode === 'preview' ? 'none' : 'block' }}
+                >
+                  <Form.Item
+                    label="Problem Statement"
+                    name="problemStatement"
+                    rules={[{ required: true }]}
+                  >
+                    <Input.TextArea rows={25} />
+                  </Form.Item>
+                </Col>
+                <Col
+                  span={viewMode === 'both' ? 12 : 24}
+                  style={{ display: viewMode === 'editor' ? 'none' : 'block' }}
+                >
+                  <div style={{ marginBottom: 8, fontWeight: 'bold' }}>Preview</div>
+                  <div
+                    style={{
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 4,
+                      padding: '8px 16px',
+                      minHeight: '500px',
+                      height: viewMode === 'both' ? 'calc(100% - 32px)' : 'auto',
+                      maxHeight: '1000px',
+                      overflow: 'auto',
+                      backgroundColor: '#fff',
+                    }}
+                  >
+                    <MarkdownRenderer content={currentValues?.problemStatement || ''} />
+                  </div>
+                </Col>
+              </Row>
             </div>
           </Tabs.TabPane>
 

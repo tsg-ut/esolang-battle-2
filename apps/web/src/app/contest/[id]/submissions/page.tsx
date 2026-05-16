@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 
 import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -28,11 +28,32 @@ export default function SubmissionsPage() {
   const isOver = contest ? new Date() > new Date(contest.endAt) : false;
 
   // URLから状態を取得
-  const scope = (searchParams.get('scope') as Scope) || 'self';
+  const scope = (searchParams.get('scope') as Scope) || undefined;
   const currentPage = Number(searchParams.get('page')) || 1;
   const sortField = searchParams.get('sortField') || undefined;
   const sortOrder = searchParams.get('sortOrder') || undefined;
   const filterUserName = searchParams.get('userName') || undefined;
+
+  // localStorageのキー (コンテスト共通)
+  const storageKey = 'submissions_scope_preference';
+
+  // 初期ロード時：URLにscopeがない場合はlocalStorageから復元
+  useEffect(() => {
+    if (!searchParams.get('scope')) {
+      const savedScope = localStorage.getItem(storageKey) as Scope;
+      const targetScope = savedScope || 'self';
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('scope', targetScope);
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+  }, [searchParams, router, pathname, storageKey]);
+
+  // scopeが変更されたら保存
+  useEffect(() => {
+    if (scope) {
+      localStorage.setItem(storageKey, scope);
+    }
+  }, [scope, storageKey]);
 
   // 複数選択フィルタのデコード
   const filterProblemIds = useMemo(
@@ -66,6 +87,8 @@ export default function SubmissionsPage() {
 
   // tRPCフィルタの構築
   const filter: any = useMemo(() => {
+    if (!scope) return null; // scopeが確定するまでフィルタを作らない
+
     const f: any = { contestId };
     if (scope === 'self' && me?.id) f.userId = me.id;
     if (scope === 'team' && myTeam?.id) f.teamId = Number(myTeam.id);
@@ -94,7 +117,7 @@ export default function SubmissionsPage() {
   ]);
 
   const { data: submissions, isLoading } = trpc.getSubmissions.useQuery(filter, {
-    enabled: !!me,
+    enabled: !!me && !!filter,
     refetchInterval: 5000,
   });
 
@@ -252,7 +275,7 @@ export default function SubmissionsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-scroll">
       <div className="flex gap-2">
         <Button
           type={scope === 'self' ? 'primary' : 'default'}

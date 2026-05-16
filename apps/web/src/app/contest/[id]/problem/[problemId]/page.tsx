@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
 import { LoginRequiredMessage } from '@/components/LoginRequiredMessage';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { CodeSubmitForm } from '@/components/submission/CodeSubmitForm';
 import { trpc } from '@/utils/trpc';
 import { CopyOutlined } from '@ant-design/icons';
@@ -108,11 +109,7 @@ export default function ProblemDetailPage() {
 
       <div className="bg-white py-8">
         <h3 className="text-lg font-bold text-gray-900">問題文</h3>
-        <div className="prose prose-blue max-w-none">
-          <div className="font-sans text-lg leading-relaxed whitespace-pre-wrap text-gray-800">
-            {problem.problemStatement}
-          </div>
-        </div>
+        <MarkdownRenderer content={problem.problemStatement} />
       </div>
 
       {sampleTestCases.length > 0 && (
