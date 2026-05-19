@@ -14,7 +14,7 @@ export function LoginRequiredMessage() {
         description={
           <span>
             提出やテストを実行するには、
-            <Link href="/user" className="font-bold text-blue-600 hover:underline">
+            <Link href="/login" className="font-bold text-blue-600 hover:underline">
               ログイン画面
             </Link>
             からログインしてください。

@@ -4,6 +4,8 @@ import React, { useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { Button, Popover, Space } from 'antd';
+
 import { BoardState, HoneycombBoardConfig } from '@esolang-battle/common';
 
 type HoneycombBoardProps = {
@@ -34,10 +36,37 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({
     return counts;
   }, [state]);
 
-  const handleCellClick = (languageId?: number) => {
-    if (languageId !== undefined) {
-      router.push(`/contest/${contestId}/submit?languageId=${languageId}`);
-    }
+  const renderCellMenu = (cellId: string, languageId: number, label: string) => {
+    const cell = state[cellId];
+    const submissionId = cell?.submissionIds?.[0];
+
+    return (
+      <Space direction="vertical" style={{ width: 180 }}>
+        {submissionId && (
+          <Button
+            type="primary"
+            block
+            onClick={() => router.push(`/contest/${contestId}/submissions/${submissionId}`)}
+          >
+            提出の詳細を見る
+          </Button>
+        )}
+        <Button
+          block
+          onClick={() => router.push(`/contest/${contestId}/submit?languageId=${languageId}`)}
+        >
+          この言語で提出する
+        </Button>
+        <Button
+          block
+          onClick={() =>
+            router.push(`/contest/${contestId}/submissions?languageId=${languageId}&scope=all`)
+          }
+        >
+          提出一覧 ({label})
+        </Button>
+      </Space>
+    );
   };
 
   const getCellStyle = (cell: any): React.CSSProperties => {
@@ -116,12 +145,8 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({
             if (!info) return null;
             const { points, x, y } = getHexPoints(info.q, info.r, HEX_SIZE);
 
-            return (
-              <g
-                key={id}
-                className="cursor-pointer transition-all hover:opacity-80"
-                onClick={() => handleCellClick(info.languageId)}
-              >
+            const cellContent = (
+              <g className="cursor-pointer transition-all hover:opacity-80">
                 <polygon points={points} style={getCellStyle(cell)} strokeWidth="1" />
                 <text
                   x={x}
@@ -145,6 +170,21 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({
                 )}
               </g>
             );
+
+            if (info.languageId !== undefined) {
+              return (
+                <Popover
+                  key={id}
+                  content={renderCellMenu(id, info.languageId, info.label)}
+                  title={info.label}
+                  trigger="click"
+                >
+                  {cellContent}
+                </Popover>
+              );
+            }
+
+            return <g key={id}>{cellContent}</g>;
           })}
         </svg>
       </div>

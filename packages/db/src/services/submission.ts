@@ -4,7 +4,7 @@ import { PrismaClient } from '../../prisma/generated/client/index';
 
 export type GetSubmissionsFilter = {
   userId?: string;
-  userName?: string;
+  userName?: string | { value: string; operator: string } | any;
   teamId?: number;
   problemId?: number | number[];
   languageId?: number | number[];
@@ -12,19 +12,30 @@ export type GetSubmissionsFilter = {
   status?: string | string[];
   orderBy?: 'id' | 'submittedAt' | 'codeLength' | 'score';
   order?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
 };
 
 export async function findSubmissions(prisma: PrismaClient, filter: GetSubmissionsFilter = {}) {
   const where: any = {};
   if (filter.userId) where.userId = filter.userId;
+
   if (filter.userName) {
-    where.user = {
-      name: {
-        contains: filter.userName,
-        mode: 'insensitive',
-      },
-    };
+    const nameVal = typeof filter.userName === 'object' ? filter.userName.value : filter.userName;
+    const operator = typeof filter.userName === 'object' ? filter.userName.operator : 'contains';
+    if (nameVal) {
+      where.user = {
+        name:
+          operator === 'eq'
+            ? { equals: nameVal, mode: 'insensitive' }
+            : {
+                contains: nameVal,
+                mode: 'insensitive',
+              },
+      };
+    }
   }
+
   if (filter.problemId) {
     where.problemId = Array.isArray(filter.problemId) ? { in: filter.problemId } : filter.problemId;
   }
@@ -57,24 +68,36 @@ export async function findSubmissions(prisma: PrismaClient, filter: GetSubmissio
     orderBy.submittedAt = 'desc';
   }
 
-  const submissions = await prisma.submission.findMany({
-    where,
-    orderBy,
-    include: {
-      user: {
-        include: {
-          teams: true,
+  const [submissions, total] = await prisma.$transaction([
+    prisma.submission.findMany({
+      where,
+      orderBy,
+      take: filter.limit,
+      skip: filter.offset,
+      include: {
+        user: {
+          include: {
+            teams: true,
+          },
         },
+        problem: {
+          include: {
+            contest: true,
+          },
+        },
+        language: true,
       },
-      problem: true,
-      language: true,
-    },
-  });
+    }),
+    prisma.submission.count({ where }),
+  ]);
 
-  return submissions.map((sub) => {
-    const { code: _, ...rest } = sub;
-    return rest;
-  });
+  return {
+    items: submissions.map((sub) => {
+      const { code: _, ...rest } = sub;
+      return rest;
+    }),
+    total,
+  };
 }
 
 export async function findSubmissionDetail(prisma: PrismaClient, id: number) {

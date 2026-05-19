@@ -4,6 +4,8 @@ import React, { useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { Button, Popover, Space } from 'antd';
+
 import { BoardState, CrossGridBoardConfig } from '@esolang-battle/common';
 
 type CrossGridBoardProps = {
@@ -34,8 +36,45 @@ export const CrossGridBoard: React.FC<CrossGridBoardProps> = ({
     return counts;
   }, [state]);
 
-  const handleCellClick = (problemId: number, languageId: number) => {
-    router.push(`/contest/${contestId}/submit?problemId=${problemId}&languageId=${languageId}`);
+  const renderCellMenu = (cellId: string, problemId: number, languageId: number) => {
+    const cell = state[cellId];
+    const submissionId = cell?.submissionIds?.[0];
+    const pName = problemInfo[String(problemId)] || `P#${problemId}`;
+    const lName = languageInfo[String(languageId)] || `L#${languageId}`;
+
+    return (
+      <Space direction="vertical" style={{ width: 180 }}>
+        {submissionId && (
+          <Button
+            type="primary"
+            block
+            onClick={() => router.push(`/contest/${contestId}/submissions/${submissionId}`)}
+          >
+            提出の詳細を見る
+          </Button>
+        )}
+        <Button
+          block
+          onClick={() =>
+            router.push(
+              `/contest/${contestId}/submit?problemId=${problemId}&languageId=${languageId}`
+            )
+          }
+        >
+          この言語で提出する
+        </Button>
+        <Button
+          block
+          onClick={() =>
+            router.push(
+              `/contest/${contestId}/submissions?problemId=${problemId}&languageId=${languageId}&scope=all`
+            )
+          }
+        >
+          提出一覧 ({lName})
+        </Button>
+      </Space>
+    );
   };
 
   const getCellStyle = (cell?: any): React.CSSProperties => {
@@ -88,17 +127,24 @@ export const CrossGridBoard: React.FC<CrossGridBoardProps> = ({
                 {problemIds.map((pid) => {
                   const cellId = `p_${pid}_l_${lid}`;
                   const cell = state[cellId];
+                  const pName = problemInfo[String(pid)] || `P#${pid}`;
+                  const lName = languageInfo[String(lid)] || `L#${lid}`;
                   return (
-                    <td
+                    <Popover
                       key={pid}
-                      className="group relative h-12 cursor-pointer rounded shadow-sm transition-all hover:scale-[1.02] active:scale-95"
-                      style={getCellStyle(cell)}
-                      onClick={() => handleCellClick(pid, lid)}
+                      content={renderCellMenu(cellId, pid, lid)}
+                      title={`${lName} - ${pName}`}
+                      trigger="click"
                     >
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs font-black">{cell?.score ?? ''}</span>
-                      </div>
-                    </td>
+                      <td
+                        className="group relative h-12 cursor-pointer rounded shadow-sm transition-all hover:scale-[1.02] active:scale-95"
+                        style={getCellStyle(cell)}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs font-black">{cell?.score ?? ''}</span>
+                        </div>
+                      </td>
+                    </Popover>
                   );
                 })}
               </tr>

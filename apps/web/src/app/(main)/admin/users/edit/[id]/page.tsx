@@ -1,0 +1,77 @@
+'use client';
+
+import React from 'react';
+
+import { trpc } from '@/utils/trpc';
+import { Edit, useForm, useSelect } from '@refinedev/antd';
+import { useParsed } from '@refinedev/core';
+import { Checkbox, Form, Input, Select } from 'antd';
+
+export default function UserEdit() {
+  const { id } = useParsed();
+  const userId = id ? String(id) : undefined;
+
+  const { formProps, saveButtonProps, form } = useForm({
+    redirect: false,
+  });
+
+  const { data: user } = trpc.adminGetUser.useQuery({ id: userId ?? '' }, { enabled: !!userId });
+
+  const currentValues = Form.useWatch([], form) as any;
+
+  const isChanged =
+    user &&
+    currentValues &&
+    (currentValues.name !== user.name ||
+      currentValues.isAdmin !== user.isAdmin ||
+      JSON.stringify((currentValues.teamIds || []).map(Number).sort()) !==
+        JSON.stringify((user.teamIds || []).map(Number).sort()) ||
+      !!currentValues.password); // パスワードが入力されていれば変更ありとみなす
+
+  // For team selection
+  const { selectProps: teamSelectProps } = useSelect({
+    resource: 'teams',
+    optionLabel: (item) =>
+      `C#${(item as any).contestId}: ${(item as any).name || (item as any).color} (#${(item as any).id})`,
+    optionValue: 'id',
+  });
+
+  return (
+    <Edit
+      saveButtonProps={{ ...saveButtonProps, disabled: saveButtonProps.disabled || !isChanged }}
+    >
+      <Form {...formProps} layout="vertical">
+        <Form.Item label="ID" name="id">
+          <Input disabled />
+        </Form.Item>
+        <Form.Item
+          label="Name"
+          name="name"
+          rules={[{ required: true, message: 'Please input username' }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item label="Password (leave blank to keep current)" name="password">
+          <Input.Password placeholder="Enter new password to reset" />
+        </Form.Item>
+        <Form.Item label="Is Admin" name="isAdmin" valuePropName="checked">
+          <Checkbox>Grant administrator privileges</Checkbox>
+        </Form.Item>
+        <Form.Item label="Teams" name="teamIds">
+          <Select
+            {...teamSelectProps}
+            mode="multiple"
+            placeholder="Select teams"
+            allowClear
+            showSearch
+            filterOption={(input, option) =>
+              String(option?.label ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          />
+        </Form.Item>
+      </Form>
+    </Edit>
+  );
+}

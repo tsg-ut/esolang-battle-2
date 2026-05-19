@@ -81,7 +81,9 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
     setFileName(null);
   };
 
-  const codeBytes = isBase64 ? (code.length * 3) / 4 : new TextEncoder().encode(code).length;
+  const codeBytes = isBase64
+    ? (code.length * 3) / 4 - (code.endsWith('==') ? 2 : code.endsWith('=') ? 1 : 0)
+    : new TextEncoder().encode(code).length;
   const isTooLarge = codeBytes > 1 * 1024 * 1024;
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 
 import AuthProvider from '@/components/AuthProvider';
-import NavBar from '@/components/NavBar';
 import TRPCProvider from '@/components/TRPCProvider';
 import { App as AntdApp } from 'antd';
 
@@ -21,10 +20,7 @@ export default function RootLayout({ children }: { children: any }) {
       <body className={inter.className}>
         <AuthProvider>
           <TRPCProvider>
-            <AntdApp>
-              <NavBar />
-              <main>{children}</main>
-            </AntdApp>
+            <AntdApp>{children}</AntdApp>
           </TRPCProvider>
         </AuthProvider>
       </body>

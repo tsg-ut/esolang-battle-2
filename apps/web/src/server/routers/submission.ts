@@ -33,7 +33,12 @@ export const submissionRouter = router({
       },
     })
     .input(submissionFilterSchema)
-    .output(z.array(submissionSummarySchema))
+    .output(
+      z.object({
+        items: z.array(submissionSummarySchema),
+        total: z.number(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const contestId = input?.contestId;
 
@@ -76,15 +81,18 @@ export const submissionRouter = router({
       }
 
       // 3. 取得とアバター変換
-      const results = await findSubmissions(ctx.prisma, filter);
-      return results.map((s) => ({
-        ...s,
-        submittedAt: s.submittedAt.toISOString(),
-        user: {
-          ...s.user,
-          image: getAvatarUrl(s.user.id, !!s.user.image),
-        },
-      }));
+      const { items, total } = await findSubmissions(ctx.prisma, filter);
+      return {
+        items: items.map((s) => ({
+          ...s,
+          submittedAt: s.submittedAt.toISOString(),
+          user: {
+            ...s.user,
+            image: getAvatarUrl(s.user.id, !!s.user.image),
+          },
+        })),
+        total,
+      };
     }),
   getLanguages: publicProcedure.query(async ({ ctx }) => {
     return await findAllLanguages(ctx.prisma);

@@ -2,13 +2,13 @@
 
 import React, { useEffect } from 'react';
 
-import { useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { trpc } from '@/utils/trpc';
-import { HomeOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
-import { Avatar, Button, Space } from 'antd';
+import { HomeOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Button, Dropdown, Space } from 'antd';
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -52,12 +52,12 @@ export default function NavBar() {
             コンテスト
           </Link>
           <Link
-            href="/languages"
+            href="/docs/about"
             className={`text-sm font-medium transition-colors hover:text-blue-600 ${
-              isActive('/languages') ? 'text-blue-600' : 'text-gray-600'
+              isActive('/docs') ? 'text-blue-600' : 'text-gray-600'
             }`}
           >
-            言語一覧
+            ドキュメント
           </Link>
         </Space>
       </Space>
@@ -75,24 +75,58 @@ export default function NavBar() {
           </Link>
         )}
 
-        <Link href="/user">
-          <Button
-            type={isActive('/user') ? 'primary' : 'default'}
-            icon={<UserOutlined />}
-            className="flex items-center"
+        {me ? (
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'profile',
+                  label: <Link href={`/user/${me.id}`}>プロフィール</Link>,
+                  icon: <UserOutlined />,
+                },
+                {
+                  key: 'settings',
+                  label: <Link href="/user/settings">ユーザー設定</Link>,
+                  icon: <SettingOutlined />,
+                },
+                {
+                  type: 'divider',
+                },
+                {
+                  key: 'logout',
+                  label: 'ログアウト',
+                  icon: <LogoutOutlined />,
+                  danger: true,
+                  onClick: () => signOut({ callbackUrl: '/' }),
+                },
+              ],
+            }}
+            placement="bottomRight"
+            arrow
           >
-            {me ? (
-              <Space>
-                <Avatar size="small" style={{ backgroundColor: '#87d068' }}>
+            <Button
+              type={isActive('/user') ? 'primary' : 'default'}
+              icon={
+                <Avatar size="small" src={me.image} icon={!me.image && <UserOutlined />}>
                   {me.name?.[0]?.toUpperCase()}
                 </Avatar>
-                <span>{me.name}</span>
-              </Space>
-            ) : (
-              'ログイン'
-            )}
-          </Button>
-        </Link>
+              }
+              className="flex items-center"
+            >
+              <span>{me.name}</span>
+            </Button>
+          </Dropdown>
+        ) : (
+          <Link href="/login">
+            <Button
+              type={isActive('/login') ? 'primary' : 'default'}
+              icon={<UserOutlined />}
+              className="flex items-center"
+            >
+              ログイン
+            </Button>
+          </Link>
+        )}
       </Space>
     </nav>
   );

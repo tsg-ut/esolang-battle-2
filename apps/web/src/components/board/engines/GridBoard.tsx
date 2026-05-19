@@ -2,11 +2,12 @@
 
 import React, { useMemo } from 'react';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { getAvatarUrl } from '@/utils/user';
 import { UserOutlined } from '@ant-design/icons';
-import { Avatar, Tooltip } from 'antd';
+import { Avatar, Button, Popover, Space, Tooltip } from 'antd';
 
 import { BoardState, GridBoardConfig } from '@esolang-battle/common';
 
@@ -40,12 +41,6 @@ export const GridBoard: React.FC<GridBoardProps> = ({
     return counts;
   }, [state]);
 
-  const handleCellClick = (languageId?: number) => {
-    if (languageId !== undefined) {
-      router.push(`/contest/${contestId}/submit?languageId=${languageId}`);
-    }
-  };
-
   const getCellStyle = (ownerTeamIds: number[]): React.CSSProperties => {
     if (!ownerTeamIds || ownerTeamIds.length === 0)
       return { backgroundColor: '#eee', color: '#666' };
@@ -73,6 +68,40 @@ export const GridBoard: React.FC<GridBoardProps> = ({
     return 'text-[16px]';
   };
 
+  const renderCellMenu = (cellId: string, languageId: number, label: string) => {
+    const cell = state[cellId];
+    // 最新の提出（オーナーがいる場合）
+    const submissionId = cell?.submissionIds?.[0];
+
+    return (
+      <Space direction="vertical" style={{ width: 180 }}>
+        {submissionId && (
+          <Button
+            type="primary"
+            block
+            onClick={() => router.push(`/contest/${contestId}/submissions/${submissionId}`)}
+          >
+            提出の詳細を見る
+          </Button>
+        )}
+        <Button
+          block
+          onClick={() => router.push(`/contest/${contestId}/submit?languageId=${languageId}`)}
+        >
+          この言語で提出する
+        </Button>
+        <Button
+          block
+          onClick={() =>
+            router.push(`/contest/${contestId}/submissions?languageId=${languageId}&scope=all`)
+          }
+        >
+          提出一覧 ({label})
+        </Button>
+      </Space>
+    );
+  };
+
   return (
     <div className="flex w-full flex-col items-center gap-6 py-4">
       {/* 盤面エリア: 横スクロール可能にするために w-full + overflow-x-auto */}
@@ -95,18 +124,18 @@ export const GridBoard: React.FC<GridBoardProps> = ({
 
             const ownerUsers = cell?.ownerUsers || [];
 
-            return (
+            const cellContent = (
               <div
                 key={cellId}
                 role={info.languageId !== undefined ? 'button' : undefined}
                 tabIndex={info.languageId !== undefined ? 0 : undefined}
                 className={`relative flex aspect-square items-center justify-center overflow-hidden rounded border border-black/5 shadow-sm transition-all hover:scale-[1.03] ${info.languageId !== undefined ? 'cursor-pointer' : ''}`}
                 style={getCellStyle(cell?.ownerTeamIds || [])}
-                onClick={() => handleCellClick(info.languageId)}
                 onKeyDown={(e) => {
                   if (info.languageId !== undefined && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault();
-                    handleCellClick(info.languageId);
+                    // キー操作時のデフォルト挙動は提出画面への遷移（既存挙動維持）
+                    router.push(`/contest/${contestId}/submit?languageId=${info.languageId}`);
                   }
                 }}
               >
@@ -128,13 +157,19 @@ export const GridBoard: React.FC<GridBoardProps> = ({
                   <div className="absolute right-0.5 bottom-0.5 flex -space-x-2.5 overflow-hidden rounded-full bg-black/10 p-0.5 transition-all duration-300 hover:space-x-0.5">
                     {ownerUsers.slice(0, 3).map((user) => (
                       <Tooltip key={user.id} title={user.name}>
-                        <Avatar
-                          size={18}
-                          src={getAvatarUrl(user.id)}
-                          icon={<UserOutlined />}
-                          className="border border-white/40 shadow-sm"
-                          style={{ width: '18px', height: '18px', fontSize: '10px' }}
-                        />
+                        <Link
+                          href={`/user/${user.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-block"
+                        >
+                          <Avatar
+                            size={18}
+                            src={getAvatarUrl(user.id)}
+                            icon={<UserOutlined />}
+                            className="border border-white/40 shadow-sm hover:scale-110"
+                            style={{ width: '18px', height: '18px', fontSize: '10px' }}
+                          />
+                        </Link>
                       </Tooltip>
                     ))}
                     {ownerUsers.length > 3 && (
@@ -148,6 +183,22 @@ export const GridBoard: React.FC<GridBoardProps> = ({
                 )}
               </div>
             );
+
+            if (info.languageId !== undefined) {
+              return (
+                <Popover
+                  key={cellId}
+                  content={renderCellMenu(cellId, info.languageId, info.label)}
+                  title={info.label}
+                  trigger="click"
+                  placement="right"
+                >
+                  {cellContent}
+                </Popover>
+              );
+            }
+
+            return cellContent;
           })}
         </div>
       </div>

@@ -31,14 +31,16 @@ export const listProblemsSchema = listInContestSchema;
 
 export const submissionFilterSchema = z.object({
   userId: z.string().optional(),
-  userName: z.string().optional(),
+  userName: z.any().optional(), // StringFilterDropdown からオブジェクトが来ることがある
   teamId: z.number().optional(),
-  problemId: z.number().optional(), // Union not supported by trpc-to-openapi for query params
-  languageId: z.number().optional(),
+  problemId: z.union([z.number(), z.array(z.number())]).optional(),
+  languageId: z.union([z.number(), z.array(z.number())]).optional(),
   contestId: z.number().optional(),
-  status: z.enum(['AC', 'WA', 'TLE', 'RE', 'WJ', 'ALL']).optional(),
+  status: z.union([z.string(), z.array(z.string())]).optional(),
   orderBy: z.enum(['id', 'submittedAt', 'codeLength', 'score']).optional(),
   order: z.enum(['asc', 'desc']).optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
 });
 
 export const contestSummarySchema = z.object({
@@ -76,6 +78,12 @@ export const submissionSummarySchema = z.object({
   problem: z.object({
     id: z.number(),
     title: z.string(),
+    contest: z
+      .object({
+        id: z.number(),
+        name: z.string(),
+      })
+      .optional(),
   }),
   language: z.object({
     id: z.number(),
