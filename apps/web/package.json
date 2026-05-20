@@ -11,6 +11,12 @@
   "dependencies": {
     "@ant-design/icons": "^6.1.1",
     "@auth/prisma-adapter": "^2.11.2",
+    "@codemirror/autocomplete": "^6.20.2",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/language": "^6.12.3",
+    "@codemirror/search": "^6.7.0",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.43.0",
     "@esolang-battle/common": "workspace:*",
     "@esolang-battle/db": "workspace:*",
     "@prisma/client": "^7.7.0",

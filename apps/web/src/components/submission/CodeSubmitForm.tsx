@@ -3,7 +3,11 @@
 import React, { useEffect, useState } from 'react';
 
 import { UploadOutlined } from '@ant-design/icons';
-import { App, Button, Select, Tag, Upload } from 'antd';
+import { App, Button, Select, Tag, Typography, Upload } from 'antd';
+
+import { TextVizEditor } from './TextVizEditor';
+
+const { Text } = Typography;
 
 export interface Language {
   id: number;
@@ -75,8 +79,8 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
     return false;
   };
 
-  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setCode(e.target.value);
+  const handleCodeChange = (value: string) => {
+    setCode(value);
     setIsBase64(false);
     setFileName(null);
   };
@@ -128,9 +132,7 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <label htmlFor="code-textarea" className="block text-sm font-medium text-gray-700">
-            ソースコード
-          </label>
+          <label className="block text-sm font-medium text-gray-700">ソースコード</label>
           {fileName && (
             <Tag
               color="blue"
@@ -145,15 +147,35 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
             </Tag>
           )}
         </div>
-        <textarea
-          id="code-textarea"
-          rows={12}
-          value={isBase64 ? '[File Content Loaded]' : code}
-          onChange={handleCodeChange}
-          disabled={isBase64}
-          className={`block w-full rounded-lg border border-gray-300 px-4 py-3 font-mono text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none ${isBase64 ? 'bg-gray-100 text-gray-500' : 'bg-gray-50'} ${isTooLarge ? 'border-red-500 ring-red-500' : ''}`}
-          placeholder="ここにコードを入力、またはファイルをアップロード..."
-        />
+
+        {isBase64 ? (
+          <div className="rounded-lg border-2 border-dashed border-blue-200 bg-blue-50 p-12 text-center">
+            <Text strong className="block text-blue-600">
+              {fileName} をアップロード済み
+            </Text>
+            <Button
+              type="link"
+              danger
+              onClick={() => {
+                setFileName(null);
+                setCode('');
+                setIsBase64(false);
+              }}
+            >
+              ファイルをクリアしてエディタに戻る
+            </Button>
+          </div>
+        ) : (
+          <div className={isTooLarge ? 'rounded-xl border-2 border-red-500' : ''}>
+            <TextVizEditor
+              value={code}
+              onChange={handleCodeChange}
+              placeholder="ここにコードを入力、またはファイルをアップロード..."
+              className="w-full"
+            />
+          </div>
+        )}
+
         <div className="mt-2 flex justify-end gap-4 text-xs text-gray-500">
           {!isBase64 && <span>文字数: {code.length} chars</span>}
           <span className={isTooLarge ? 'font-bold text-red-500' : ''}>
