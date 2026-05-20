@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import { TextVizEditor } from '@/components/submission/TextVizEditor';
 import { trpc } from '@/utils/trpc';
 import {
   CopyOutlined,
@@ -215,22 +216,13 @@ export default function SubmissionDetailPage() {
             </Button>
           </Card>
         ) : (
-          <pre
-            style={{
-              maxHeight: 500,
-              overflow: 'auto',
-              padding: 24,
-              borderRadius: 8,
-              backgroundColor: '#001529',
-              color: '#e6f4ff',
-              fontFamily: 'monospace',
-              fontSize: '14px',
-              lineHeight: '1.6',
-              margin: 0,
-            }}
-          >
-            {submission.codeText}
-          </pre>
+          <TextVizEditor
+            value={submission.codeText || ''}
+            readOnly={true}
+            scrollable={false}
+            placeholder="(empty)"
+            lineWrapping={true}
+          />
         )}
       </div>
 

@@ -1,45 +1,42 @@
 // TextVizEditor.tsx
 // React + CodeMirror 6 実装（制御文字表示切替 / 空白の可視化+ハイライト / 設定保存）
+import React, { useEffect, useRef, useState } from 'react';
 
-import React, { memo, useEffect, useRef, useState } from "react";
+import { SettingOutlined } from '@ant-design/icons';
+import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 import {
-  Compartment,
-  EditorState,
-  StateEffect,
-} from "@codemirror/state";
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+  insertNewline,
+  insertNewlineAndIndent,
+} from '@codemirror/commands';
+import { indentOnInput } from '@codemirror/language';
+import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
+import { Compartment, EditorState, StateEffect } from '@codemirror/state';
 import {
-  EditorView,
+  Command,
   Decoration,
   DecorationSet,
+  EditorView,
   ViewPlugin,
   ViewUpdate,
   WidgetType,
-  keymap,
   drawSelection,
   highlightActiveLine,
+  keymap,
+  lineNumbers,
   placeholder,
-  Command,
-} from "@codemirror/view";
-import { 
-  defaultKeymap, 
-  history, 
-  historyKeymap, 
-  indentWithTab,
-  insertNewline,
-  insertNewlineAndIndent 
-} from "@codemirror/commands";
-import { indentOnInput } from "@codemirror/language";
-import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
-import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
-import { SettingOutlined } from "@ant-design/icons";
-import { Button, Popover, Typography } from "antd";
+} from '@codemirror/view';
+import { Button, Popover, Typography } from 'antd';
 
 const { Text } = Typography;
 
 // ====== 設定 ======
-const STORAGE_KEY = "text_viz_editor_settings";
+const STORAGE_KEY = 'text_viz_editor_settings';
 
-type ControlCharFormat = "caret" | "unicode";
+type ControlCharFormat = 'caret' | 'unicode';
 
 type Props = {
   value: string;
@@ -49,6 +46,7 @@ type Props = {
   placeholder?: string;
   lineWrapping?: boolean;
   scrollable?: boolean;
+  readOnly?: boolean;
 };
 
 type VizOptions = {
@@ -66,7 +64,7 @@ const defaultVizOptions: VizOptions = {
   whitespaceSpaces: false,
   whitespaceTabs: true,
   showControlChars: true,
-  controlCharFormat: "caret",
+  controlCharFormat: 'caret',
   indentWithTab: true,
   autoIndent: true,
 };
@@ -76,21 +74,21 @@ function isAsciiControl(ch: number) {
 }
 
 function caretNotation(ch: number) {
-  if (ch === 0x7f) return "^?";
+  if (ch === 0x7f) return '^?';
   const code = ch + 0x40;
-  return "^" + String.fromCharCode(code);
+  return '^' + String.fromCharCode(code);
 }
 
 function unicodeNotation(ch: number) {
-  return "U+" + ch.toString(16).toUpperCase().padStart(4, "0");
+  return 'U+' + ch.toString(16).toUpperCase().padStart(4, '0');
 }
 
 const insertTabChar: Command = ({ state, dispatch }) => {
   if (state.readOnly) return false;
   dispatch(
-    state.update(state.replaceSelection("\t"), {
+    state.update(state.replaceSelection('\t'), {
       scrollIntoView: true,
-      userEvent: "input.insert",
+      userEvent: 'input.insert',
     })
   );
   return true;
@@ -99,7 +97,7 @@ const insertTabChar: Command = ({ state, dispatch }) => {
 // ====== 空白可視化用 Widget ======
 class WhitespaceWidget extends WidgetType {
   constructor(
-    private kind: "space" | "tab",
+    private kind: 'space' | 'tab',
     private text: string
   ) {
     super();
@@ -108,14 +106,15 @@ class WhitespaceWidget extends WidgetType {
     return this.kind === other.kind && this.text === other.text;
   }
   toDOM() {
-    const span = document.createElement("span");
-    span.className =
-      this.kind === "space" ? "cm-ws-symbol cm-ws-space" : "cm-ws-symbol cm-ws-tab";
+    const span = document.createElement('span');
+    span.className = this.kind === 'space' ? 'cm-ws-symbol cm-ws-space' : 'cm-ws-symbol cm-ws-tab';
     span.textContent = this.text;
-    span.setAttribute("aria-hidden", "true");
+    span.setAttribute('aria-hidden', 'true');
     return span;
   }
-  ignoreEvent() { return true; }
+  ignoreEvent() {
+    return true;
+  }
 }
 
 // ====== 制御文字可視化用 Widget ======
@@ -127,13 +126,15 @@ class ControlCharWidget extends WidgetType {
     return this.label === other.label;
   }
   toDOM() {
-    const span = document.createElement("span");
-    span.className = "cm-ctrlchar";
+    const span = document.createElement('span');
+    span.className = 'cm-ctrlchar';
     span.textContent = this.label;
-    span.setAttribute("aria-hidden", "true");
+    span.setAttribute('aria-hidden', 'true');
     return span;
   }
-  ignoreEvent() { return true; }
+  ignoreEvent() {
+    return true;
+  }
 }
 
 const vizCompartment = new Compartment();
@@ -166,23 +167,43 @@ function buildVizPlugin(options: VizOptions) {
             const c = text.charCodeAt(i);
             const ch = text[i];
             if (options.showWhitespace) {
-              if (ch === " " && options.whitespaceSpaces) {
-                decos.push(Decoration.mark({ class: "cm-ws-mark cm-ws-mark-space" }).range(pos, pos + 1));
-                decos.push(Decoration.replace({ widget: new WhitespaceWidget("space", "·"), inclusive: false }).range(pos, pos + 1));
+              if (ch === ' ' && options.whitespaceSpaces) {
+                decos.push(
+                  Decoration.mark({ class: 'cm-ws-mark cm-ws-mark-space' }).range(pos, pos + 1)
+                );
+                decos.push(
+                  Decoration.replace({
+                    widget: new WhitespaceWidget('space', '·'),
+                    inclusive: false,
+                  }).range(pos, pos + 1)
+                );
                 continue;
               }
-              if (ch === "\t" && options.whitespaceTabs) {
-                decos.push(Decoration.mark({ class: "cm-ws-mark cm-ws-mark-tab" }).range(pos, pos + 1));
+              if (ch === '\t' && options.whitespaceTabs) {
+                decos.push(
+                  Decoration.mark({ class: 'cm-ws-mark cm-ws-mark-tab' }).range(pos, pos + 1)
+                );
                 // タブは "⇥ " を使用
-                decos.push(Decoration.replace({ widget: new WhitespaceWidget("tab", "⇥ "), inclusive: false }).range(pos, pos + 1));
+                decos.push(
+                  Decoration.replace({
+                    widget: new WhitespaceWidget('tab', '⇥ '),
+                    inclusive: false,
+                  }).range(pos, pos + 1)
+                );
                 continue;
               }
             }
             if (options.showControlChars) {
-              if (isAsciiControl(c) && ch !== "\t" && ch !== "\n" && ch !== "\r") {
-                const label = options.controlCharFormat === "caret" ? caretNotation(c) : unicodeNotation(c);
-                decos.push(Decoration.replace({ widget: new ControlCharWidget(label), inclusive: false }).range(pos, pos + 1));
-                decos.push(Decoration.mark({ class: "cm-ctrlchar-mark" }).range(pos, pos + 1));
+              if (isAsciiControl(c) && ch !== '\t' && ch !== '\n' && ch !== '\r') {
+                const label =
+                  options.controlCharFormat === 'caret' ? caretNotation(c) : unicodeNotation(c);
+                decos.push(
+                  Decoration.replace({
+                    widget: new ControlCharWidget(label),
+                    inclusive: false,
+                  }).range(pos, pos + 1)
+                );
+                decos.push(Decoration.mark({ class: 'cm-ctrlchar-mark' }).range(pos, pos + 1));
               }
             }
           }
@@ -205,12 +226,12 @@ function behaviorExtension(options: VizOptions) {
   if (options.indentWithTab) {
     keys.push(indentWithTab);
   } else {
-    keys.push({ key: "Tab", run: insertTabChar });
+    keys.push({ key: 'Tab', run: insertTabChar });
   }
 
   // Enter handling: Override default behavior if autoIndent is disabled
   keys.push({
-    key: "Enter",
+    key: 'Enter',
     run: options.autoIndent ? insertNewlineAndIndent : insertNewline,
   });
 
@@ -232,9 +253,11 @@ export function TextVizEditor({
   onChange,
   className,
   style,
-  placeholder: placeholderText = "Type here…",
+  placeholder: placeholderText = '',
+
   lineWrapping = true,
   scrollable = true,
+  readOnly = false,
 }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -249,7 +272,7 @@ export function TextVizEditor({
         const parsed = JSON.parse(saved);
         setOpts((prev) => ({ ...prev, ...parsed }));
       } catch (e) {
-        console.error("Failed to parse TextVizEditor settings", e);
+        console.error('Failed to parse TextVizEditor settings', e);
       }
     }
     setIsLoaded(true);
@@ -276,9 +299,10 @@ export function TextVizEditor({
   useEffect(() => {
     if (!hostRef.current) return;
     const baseExtensions = [
+      lineNumbers(),
       history(),
       drawSelection(),
-      highlightActiveLine(),
+      !readOnly ? highlightActiveLine() : [],
       highlightSelectionMatches(),
       autocompletion(),
       lineWrapping ? EditorView.lineWrapping : [],
@@ -286,33 +310,58 @@ export function TextVizEditor({
         if (u.docChanged) onChange?.(u.state.doc.toString());
       }),
       EditorView.theme({
-        "&": { 
-          fontSize: "14px",
-          height: scrollable ? "320px" : "auto",
-          maxHeight: scrollable ? "600px" : "none"
+        '&': {
+          fontSize: '14px',
+          height: scrollable ? '320px' : 'auto',
+          maxHeight: scrollable ? '600px' : 'none',
         },
-        ".cm-scroller": { overflow: scrollable ? "auto" : "visible" },
-        ".cm-content": { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" },
-        ".cm-ws-mark-space": { backgroundColor: "rgba(255, 0, 0, 0.08)" },
-        ".cm-ws-mark-tab": { backgroundColor: "rgba(0, 100, 255, 0.10)" },
-        ".cm-ws-symbol": { display: "inline-block", textAlign: "center", opacity: "0.8", userSelect: "none" },
-        ".cm-ws-space": { color: "rgba(255, 0, 0, 0.8)", backgroundColor: "rgba(255, 0, 0, 0.08)", width: "1ch" },
-        ".cm-ws-tab": { color: "rgba(0, 100, 255, 0.9)", backgroundColor: "rgba(0, 100, 255, 0.10)", width: "2ch" },
-        ".cm-ctrlchar-mark": { backgroundColor: "rgba(255, 165, 0, 0.12)" },
-        ".cm-ctrlchar": { fontSize: "0.85em", padding: "0 2px", borderRadius: "4px", backgroundColor: "rgba(255, 165, 0, 0.18)", color: "rgba(140, 80, 0, 1)", userSelect: "none" },
+        '.cm-scroller': { overflow: scrollable ? 'auto' : 'visible' },
+        '.cm-content': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' },
+        '.cm-activeLine': {
+          backgroundColor: readOnly ? 'transparent !important' : null,
+        },
+        '.cm-ws-mark-space': { backgroundColor: 'rgba(255, 0, 0, 0.08)' },
+        '.cm-ws-mark-tab': { backgroundColor: 'rgba(0, 100, 255, 0.10)' },
+        '.cm-ws-symbol': {
+          display: 'inline-block',
+          textAlign: 'center',
+          opacity: '0.8',
+          userSelect: 'none',
+        },
+        '.cm-ws-space': {
+          color: 'rgba(255, 0, 0, 0.8)',
+          backgroundColor: 'rgba(255, 0, 0, 0.08)',
+          width: '1ch',
+        },
+        '.cm-ws-tab': {
+          color: 'rgba(0, 100, 255, 0.9)',
+          backgroundColor: 'rgba(0, 100, 255, 0.10)',
+          width: '2ch',
+        },
+        '.cm-ctrlchar-mark': { backgroundColor: 'rgba(255, 165, 0, 0.12)' },
+        '.cm-ctrlchar': {
+          fontSize: '0.85em',
+          padding: '0 2px',
+          borderRadius: '4px',
+          backgroundColor: 'rgba(255, 165, 0, 0.18)',
+          color: 'rgba(140, 80, 0, 1)',
+          userSelect: 'none',
+        },
       }),
+      EditorState.readOnly.of(readOnly),
+      EditorView.editable.of(!readOnly),
       EditorState.tabSize.of(2),
       placeholder(placeholderText),
       vizCompartment.of(vizExtension(opts)),
       behaviorCompartment.of(behaviorExtension(opts)),
     ];
-    const view = new EditorView({ 
-      state: EditorState.create({ doc: value, extensions: baseExtensions }), 
-      parent: hostRef.current 
+    const view = new EditorView({
+      state: EditorState.create({ doc: value, extensions: baseExtensions }),
+      parent: hostRef.current,
     });
     viewRef.current = view;
     return () => view.destroy();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update extensions when options change
@@ -330,9 +379,9 @@ export function TextVizEditor({
   }, [opts, isLoaded]);
 
   const settingsContent = (
-    <div className="flex flex-col gap-4 p-2 min-w-[200px]">
+    <div className="flex min-w-[200px] flex-col gap-4 p-2">
       <div className="flex flex-col gap-2">
-        <Text strong className="text-gray-400 uppercase text-[10px] block mb-1">
+        <Text strong className="mb-1 block text-[10px] text-gray-400 uppercase">
           表示設定
         </Text>
         <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -343,7 +392,7 @@ export function TextVizEditor({
           />
           制御文字を可視化
         </label>
-        <div className="flex items-center gap-2 ml-5">
+        <div className="ml-5 flex items-center gap-2">
           <span className="text-xs text-gray-500">表記:</span>
           <select
             style={{ fontSize: '12px' }}
@@ -358,7 +407,7 @@ export function TextVizEditor({
           </select>
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2 text-sm mt-1">
+        <label className="mt-1 flex cursor-pointer items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={opts.showWhitespace}
@@ -366,7 +415,7 @@ export function TextVizEditor({
           />
           空白を可視化
         </label>
-        <div className="flex flex-col gap-1 ml-5">
+        <div className="ml-5 flex flex-col gap-1">
           <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-500">
             <input
               type="checkbox"
@@ -388,52 +437,54 @@ export function TextVizEditor({
         </div>
       </div>
 
-      <div className="h-px bg-gray-100" />
+      {!readOnly && (
+        <>
+          <div className="h-px bg-gray-100" />
 
-      <div className="flex flex-col gap-2">
-        <Text strong className="text-gray-400 uppercase text-[10px] block mb-1">
-          入力設定
-        </Text>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={opts.indentWithTab}
-            onChange={(e) => setOpts((o) => ({ ...o, indentWithTab: e.target.checked }))}
-          />
-          Tabでインデント
-        </label>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={opts.autoIndent}
-            onChange={(e) => setOpts((o) => ({ ...o, autoIndent: e.target.checked }))}
-          />
-          オートインデント
-        </label>
-      </div>
+          <div className="flex flex-col gap-2">
+            <Text strong className="mb-1 block text-[10px] text-gray-400 uppercase">
+              入力設定
+            </Text>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={opts.indentWithTab}
+                onChange={(e) => setOpts((o) => ({ ...o, indentWithTab: e.target.checked }))}
+              />
+              Tabでインデント
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={opts.autoIndent}
+                onChange={(e) => setOpts((o) => ({ ...o, autoIndent: e.target.checked }))}
+              />
+              オートインデント
+            </label>
+          </div>
+        </>
+      )}
     </div>
   );
 
   return (
     <div className={`relative ${className}`} style={{ ...style }}>
-      <div className="absolute right-2 top-2 z-10">
-        <Popover content={settingsContent} title="Editor Settings" trigger="click" placement="bottomRight">
+      <div className="absolute top-1 right-1 z-10">
+        <Popover
+          content={settingsContent}
+          title="Editor Settings"
+          trigger="click"
+          placement="bottomRight"
+        >
           <Button
             size="small"
             type="text"
             icon={<SettingOutlined className="text-gray-400 hover:text-blue-500" />}
-            className="flex items-center justify-center bg-white/80 backdrop-blur shadow-sm border border-gray-200"
+            className="flex items-center justify-center border border-gray-200 bg-white/80 shadow-sm backdrop-blur"
           />
         </Popover>
       </div>
-      <div
-        ref={hostRef}
-        style={{
-          border: '1px solid rgba(0,0,0,0.15)',
-          borderRadius: 12,
-          overflow: 'hidden',
-        }}
-      />
+      <div ref={hostRef} className="overflow-hidden rounded-md border border-gray-300" />
     </div>
   );
 }
