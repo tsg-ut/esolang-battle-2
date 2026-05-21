@@ -196,7 +196,7 @@ function UserStatsTab({ user }: { user: any }) {
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} />
-                <YAxis dataKey="name" type="category" width={100} />
+                <YAxis dataKey="name" type="category" width={100} interval={0} />
                 <RechartsTooltip />
                 <Bar
                   dataKey="count"
