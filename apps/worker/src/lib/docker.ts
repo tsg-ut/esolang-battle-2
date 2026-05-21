@@ -4,8 +4,8 @@ import tar from 'tar-stream';
 const docker = new Docker();
 
 export type DockerResult = {
-  stdout: string;
-  stderr: string;
+  stdout: Buffer;
+  stderr: Buffer;
   exitCode: number;
   durationMs: number;
 };
@@ -24,25 +24,34 @@ const BATCH_MEMORY_LIMIT = 1024 * 1024 * 1024; // 1GB
  */
 async function createTar(files: Record<string, string | Buffer>): Promise<Buffer> {
   const pack = tar.pack();
-  for (const [name, content] of Object.entries(files)) {
-    pack.entry({ name, mode: 0o755 }, content);
-  }
-  pack.finalize();
 
-  return new Promise((resolve, reject) => {
+  const tarBufferPromise = new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     pack.on('data', (chunk) => chunks.push(chunk));
     pack.on('error', reject);
     pack.on('end', () => resolve(Buffer.concat(chunks)));
   });
+
+  for (const [name, content] of Object.entries(files)) {
+    const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
+    await new Promise<void>((resolve, reject) => {
+      pack.entry({ name, mode: 0o755, size: buffer.length }, buffer, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+  pack.finalize();
+
+  return tarBufferPromise;
 }
 
 /**
  * Tar helper: Extract files from a tar stream
  */
-async function extractTar(stream: any): Promise<Record<string, string>> {
+async function extractTar(stream: any): Promise<Record<string, Buffer>> {
   const extract = tar.extract();
-  const files: Record<string, string> = {};
+  const files: Record<string, Buffer> = {};
   const MAX_FILE_SIZE = 1 * 1024 * 1024; // 各ファイル最大 1MB までキャプチャ
 
   return new Promise((resolve, reject) => {
@@ -60,11 +69,7 @@ async function extractTar(stream: any): Promise<Record<string, string>> {
         }
       });
       stream.on('end', () => {
-        const content = Buffer.concat(chunks).toString('utf8').replace(/\0/g, '');
-        files[fileName] = content;
-        if (currentSize >= MAX_FILE_SIZE) {
-          files[fileName] += '\n... (output truncated)';
-        }
+        files[fileName] = Buffer.concat(chunks);
         next();
       });
       stream.on('error', reject);
@@ -180,17 +185,16 @@ async function runExecutionBatch(
     for (const tc of testCases) {
       const base = String(tc.id);
 
-      const stdout = outputFiles[`OUT_${base}`] || '';
-      const stderr = outputFiles[`ERR_${base}`] || '';
-      const exitText = outputFiles[`EXIT_${base}`] || '-1';
-      const timeText = outputFiles[`TIME_${base}`] || '';
+      const stdout = outputFiles[`OUT_${base}`] || Buffer.alloc(0);
+      let stderr = outputFiles[`ERR_${base}`] || Buffer.alloc(0);
+      const exitText = (outputFiles[`EXIT_${base}`] || Buffer.from('-1')).toString('utf8');
+      const timeText = (outputFiles[`TIME_${base}`] || Buffer.from('')).toString('utf8');
 
       let exitCode = parseInt(exitText.trim(), 10);
-      let finalStderr = stderr;
 
       if (isTimeout && exitCode === -1) {
         exitCode = 137;
-        finalStderr += '\nTime Limit Exceeded';
+        stderr = Buffer.concat([stderr, Buffer.from('\nTime Limit Exceeded')]);
       }
 
       let durationMs = 0;
@@ -213,7 +217,7 @@ async function runExecutionBatch(
 
       results[tc.id] = {
         stdout,
-        stderr: finalStderr,
+        stderr,
         exitCode: Number.isNaN(exitCode) ? -1 : exitCode,
         durationMs: Math.max(0, durationMs),
       };
@@ -327,29 +331,28 @@ export async function runJudgeScript(
 /**
  * Docker logs (Buffer) から stdout/stderr を抽出するユーティリティ
  */
-function decodeDockerLogs(buffer: Buffer): { stdout: string; stderr: string } {
-  let stdout = '';
-  let stderr = '';
+function decodeDockerLogs(buffer: Buffer): { stdout: Buffer; stderr: Buffer } {
+  const stdoutChunks: Buffer[] = [];
+  const stderrChunks: Buffer[] = [];
   let offset = 0;
   const MAX_LOG_SIZE = 1 * 1024 * 1024; // 各ストリーム最大 1MB まで
 
   while (offset < buffer.length) {
     const type = buffer.readUInt8(offset);
     const size = buffer.readUInt32BE(offset + 4);
-    const payloadBuffer = buffer.slice(offset + 8, offset + 8 + size);
-    const payload = payloadBuffer.toString('utf8').replace(/\0/g, '');
+    const payload = buffer.slice(offset + 8, offset + 8 + size);
 
     if (type === 1) {
-      if (stdout.length < MAX_LOG_SIZE) stdout += payload;
+      stdoutChunks.push(payload);
     } else if (type === 2) {
-      if (stderr.length < MAX_LOG_SIZE) stderr += payload;
+      stderrChunks.push(payload);
     }
 
     offset += 8 + size;
   }
 
-  if (stdout.length >= MAX_LOG_SIZE) stdout += '\n... (stdout truncated)';
-  if (stderr.length >= MAX_LOG_SIZE) stderr += '\n... (stderr truncated)';
-
-  return { stdout, stderr };
+  return {
+    stdout: Buffer.concat(stdoutChunks).slice(0, MAX_LOG_SIZE),
+    stderr: Buffer.concat(stderrChunks).slice(0, MAX_LOG_SIZE),
+  };
 }

@@ -196,12 +196,12 @@ model Problem {
 /// A test case for a problem
 model TestCase {
   id     Int    @id @default(autoincrement())
-  input  String
+  input  Bytes
   /// checker script that looks at submission result and assigns score
   checkerScript     String?
   checkerLanguage   Language? @relation("TestCaseCheckerLanguage", fields: [checkerLanguageId], references: [id])
   checkerLanguageId Int?
-  output            String
+  output            Bytes
   isSample          Boolean
 
 
@@ -220,8 +220,8 @@ model Execution {
   submissionId Int
 
   status        ExecutionStatus
-  stdout        String?
-  stderr        String?
+  stdout        Bytes?
+  stderr        Bytes?
   message       String?   /// Additional info from checker
   executionTime Int       /// e.g. milliseconds
   executedAt    DateTime

@@ -96,7 +96,26 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
       message.error('言語を選択してください');
       return;
     }
-    await onSubmit({ code, isBase64, fileName });
+
+    let finalCode = code;
+    let finalIsBase64 = isBase64;
+
+    // 制御文字が含まれる場合、安全のために Base64 化して送信する
+    if (!isBase64) {
+      // ヌル文字または ASCII 制御文字（改行・タブ以外）が含まれるかチェック
+      const hasControls = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(code);
+      if (hasControls) {
+        const bytes = new TextEncoder().encode(code);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        finalCode = btoa(binary);
+        finalIsBase64 = true;
+      }
+    }
+
+    await onSubmit({ code: finalCode, isBase64: finalIsBase64, fileName });
   };
 
   return (

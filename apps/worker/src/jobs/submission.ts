@@ -80,13 +80,13 @@ export async function processSubmission(submissionId: number) {
         try {
           const input: CaseCheckerInput = {
             testCase: {
-              input: testcase.input,
-              expectedOutput: testcase.output,
+              input: Buffer.from(testcase.input).toString('utf8'),
+              expectedOutput: Buffer.from(testcase.output).toString('utf8'),
               isSample: testcase.isSample,
             },
             execution: {
-              stdout: execResult.stdout,
-              stderr: execResult.stderr,
+              stdout: Buffer.from(execResult.stdout).toString('utf8'),
+              stderr: Buffer.from(execResult.stderr).toString('utf8'),
               exitCode: execResult.exitCode,
               durationMs: execResult.durationMs,
             },
@@ -108,13 +108,13 @@ export async function processSubmission(submissionId: number) {
       try {
         const input: CaseCheckerInput = {
           testCase: {
-            input: testcase.input,
-            expectedOutput: testcase.output,
+            input: Buffer.from(testcase.input).toString('utf8'),
+            expectedOutput: Buffer.from(testcase.output).toString('utf8'),
             isSample: testcase.isSample,
           },
           execution: {
-            stdout: execResult.stdout,
-            stderr: execResult.stderr,
+            stdout: Buffer.from(execResult.stdout).toString('utf8'),
+            stderr: Buffer.from(execResult.stderr).toString('utf8'),
             exitCode: execResult.exitCode,
             durationMs: execResult.durationMs,
           },
@@ -132,13 +132,13 @@ export async function processSubmission(submissionId: number) {
       // 組み込みチェッカー
       const input: CaseCheckerInput = {
         testCase: {
-          input: testcase.input,
-          expectedOutput: testcase.output,
+          input: Buffer.from(testcase.input).toString('utf8'),
+          expectedOutput: Buffer.from(testcase.output).toString('utf8'),
           isSample: testcase.isSample,
         },
         execution: {
-          stdout: execResult.stdout,
-          stderr: execResult.stderr,
+          stdout: Buffer.from(execResult.stdout).toString('utf8'),
+          stderr: Buffer.from(execResult.stderr).toString('utf8'),
           exitCode: execResult.exitCode,
           durationMs: execResult.durationMs,
         },

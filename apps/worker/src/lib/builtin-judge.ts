@@ -20,10 +20,12 @@ export function runBuiltinChecker(name: string, input: CaseCheckerInput): CaseCh
 
   const exitCodeMessage = exitCode !== 0 ? ` (Exit code ${exitCode})` : '';
 
-  const actual = stdout;
-  const expected = expectedOutput;
+  const actual = stdout || '';
+  const expected = expectedOutput || '';
 
-  console.log(`[BuiltinChecker:${name}] Actual: [${actual}], Expected: [${expected}]`);
+  console.log(
+    `[BuiltinChecker:${name}] Actual Size: ${actual.length}, Expected Size: ${expected.length}`
+  );
 
   switch (name.toUpperCase()) {
     case 'EXACT':
@@ -32,41 +34,51 @@ export function runBuiltinChecker(name: string, input: CaseCheckerInput): CaseCh
         : {
             status: 'WA',
             score: 0,
-            message: `Expected [${expected}], got [${actual}]${exitCodeMessage}`,
+            message: `Output does not match exactly${exitCodeMessage}`,
           };
 
-    case 'TRIM':
-      return actual.trim() === expected.trim()
+    case 'TRIM': {
+      const a = actual.trim();
+      const e = expected.trim();
+      return a === e
         ? { status: 'AC', score: 1, message: exitCodeMessage || undefined }
         : {
             status: 'WA',
             score: 0,
-            message: `Expected [${expected}], got [${actual}]${exitCodeMessage}`,
-          };
-
-    case 'WHITESPACE': {
-      const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
-      return normalize(actual) === normalize(expected)
-        ? { status: 'AC', score: 1, message: exitCodeMessage || undefined }
-        : {
-            status: 'WA',
-            score: 0,
-            message: `Expected [${expected}] (normalized), got [${actual}]${exitCodeMessage}`,
+            message: `Expected [${e}], got [${a}]${exitCodeMessage}`,
           };
     }
 
-    case 'IGNORE_CASE':
-      return actual.toLowerCase().trim() === expected.toLowerCase().trim()
+    case 'WHITESPACE': {
+      const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
+      const a = normalize(actual);
+      const e = normalize(expected);
+      return a === e
         ? { status: 'AC', score: 1, message: exitCodeMessage || undefined }
         : {
             status: 'WA',
             score: 0,
-            message: `Expected [${expected}] (ignore case), got [${actual}]${exitCodeMessage}`,
+            message: `Expected [${e}] (normalized), got [${a}]${exitCodeMessage}`,
           };
+    }
+
+    case 'IGNORE_CASE': {
+      const a = actualBuf.toString('utf8').toLowerCase().trim();
+      const e = expectedBuf.toString('utf8').toLowerCase().trim();
+      return a === e
+        ? { status: 'AC', score: 1, message: exitCodeMessage || undefined }
+        : {
+            status: 'WA',
+            score: 0,
+            message: `Expected [${e}] (ignore case), got [${a}]${exitCodeMessage}`,
+          };
+    }
 
     case 'FLOAT': {
-      const actualNum = parseFloat(actual.trim());
-      const expectedNum = parseFloat(expected.trim());
+      const aText = actualBuf.toString('utf8').trim();
+      const eText = expectedBuf.toString('utf8').trim();
+      const actualNum = parseFloat(aText);
+      const expectedNum = parseFloat(eText);
       const epsilon = config.epsilon || 1e-7;
 
       if (isNaN(actualNum))
@@ -81,14 +93,17 @@ export function runBuiltinChecker(name: string, input: CaseCheckerInput): CaseCh
           };
     }
 
-    case 'CONTAINS':
-      return actual.includes(expected)
+    case 'CONTAINS': {
+      const a = actualBuf.toString('utf8');
+      const e = expectedBuf.toString('utf8');
+      return a.includes(e)
         ? { status: 'AC', score: 1, message: exitCodeMessage || undefined }
         : {
             status: 'WA',
             score: 0,
-            message: `Expected to contain [${expected}], but did not${exitCodeMessage}`,
+            message: `Expected to contain [${e}], but did not${exitCodeMessage}`,
           };
+    }
 
     default:
       return { status: 'RE', score: 0, message: `Unknown builtin checker: ${name}` };

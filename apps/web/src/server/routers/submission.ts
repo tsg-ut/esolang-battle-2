@@ -124,7 +124,8 @@ export const submissionRouter = router({
 
       if (!isAdmin && !isOver && !isOwner && !isTeammate) return null;
 
-      return {
+      // 1. 基本情報の構築
+      const result = {
         id: submission.id,
         user: {
           id: submission.user.id,
@@ -151,23 +152,31 @@ export const submissionRouter = router({
         executions: submission.executions.map((e: any) => ({
           testcaseId: e.testcaseId,
           status: e.status,
-          stdout: e.stdout,
-          stderr: e.stderr,
+          stdout: e.stdout ? Buffer.from(e.stdout).toString('utf8') : '',
+          stderr: e.stderr ? Buffer.from(e.stderr).toString('utf8') : '',
           message: e.message,
           executionTime: e.executionTime,
           executedAt: e.executedAt,
           testcase: {
             id: e.testcase.id,
-            input: e.testcase.input,
-            output: e.testcase.output,
+            input: e.testcase.input ? Buffer.from(e.testcase.input).toString('utf8') : '',
+            output: e.testcase.output ? Buffer.from(e.testcase.output).toString('utf8') : '',
             isSample: e.testcase.isSample,
           },
         })),
       };
+
+      return result;
     }),
   testCode: publicProcedure.input(testCodeSchema).mutation(async ({ input }) => {
     const job = await testQueue.add('runTest', input);
-    return await job.waitUntilFinished(testQueueEvents);
+    const result = (await job.waitUntilFinished(testQueueEvents)) as any;
+
+    return {
+      ...result,
+      stdout: result.stdout ? Buffer.from(result.stdout).toString('utf8') : '',
+      stderr: result.stderr ? Buffer.from(result.stderr).toString('utf8') : '',
+    };
   }),
   getSubmittableLanguageIdsForTeam: protectedProcedure
     .input(submittableLanguageSchema)

@@ -309,10 +309,18 @@ export const adminRouter = router({
   adminGetTestCases: adminProcedure
     .input(z.object({ problemId: z.number().optional() }))
     .query(async ({ ctx, input }) => {
+      let testCases;
       if (input.problemId) {
-        return await findTestCasesByProblemId(ctx.prisma, input.problemId);
+        testCases = await findTestCasesByProblemId(ctx.prisma, input.problemId);
+      } else {
+        testCases = await ctx.prisma.testCase.findMany({ orderBy: { id: 'asc' } });
       }
-      return await ctx.prisma.testCase.findMany({ orderBy: { id: 'asc' } });
+
+      return testCases.map((tc) => ({
+        ...tc,
+        input: tc.input ? Buffer.from(tc.input).toString('utf8') : '',
+        output: tc.output ? Buffer.from(tc.output).toString('utf8') : '',
+      }));
     }),
   adminGetTestCase: adminProcedure
     .input(z.object({ id: z.number() }))
@@ -320,7 +328,11 @@ export const adminRouter = router({
       const { findTestCaseById } = await import('@esolang-battle/db');
       const testCase = await findTestCaseById(ctx.prisma, input.id);
       if (!testCase) throw new Error('TestCase not found');
-      return testCase;
+      return {
+        ...testCase,
+        input: testCase.input ? Buffer.from(testCase.input).toString('utf8') : '',
+        output: testCase.output ? Buffer.from(testCase.output).toString('utf8') : '',
+      };
     }),
   adminUpsertTestCase: adminProcedure
     .input(upsertTestCaseSchema)
@@ -421,6 +433,7 @@ export const adminRouter = router({
     });
     return subs.map((s) => ({
       ...s,
+      code: s.code ? Buffer.from(s.code).toString('utf8') : '',
       contestName: s.problem.contest.name,
       problemTitle: s.problem.title,
       languageName: s.language.name,
@@ -441,6 +454,7 @@ export const adminRouter = router({
       if (!sub) throw new Error('Submission not found');
       return {
         ...sub,
+        code: sub.code ? Buffer.from(sub.code).toString('utf8') : '',
         contestName: sub.problem.contest.name,
       };
     }),

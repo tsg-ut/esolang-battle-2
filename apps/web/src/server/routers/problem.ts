@@ -26,8 +26,8 @@ export const problemRouter = router({
         .filter((tc) => tc.isSample)
         .map((tc) => ({
           id: tc.id,
-          input: tc.input,
-          output: tc.output,
+          input: tc.input ? Buffer.from(tc.input).toString('utf8') : '',
+          output: tc.output ? Buffer.from(tc.output).toString('utf8') : '',
         })),
       acceptedLanguages: languages.map((lang) => ({
         id: lang.id,

@@ -24,7 +24,13 @@ export async function upsertTestCase(
     checkerScript?: string | null;
   }
 ) {
-  const { id, ...payload } = data;
+  const { id, ...rest } = data;
+  const payload = {
+    ...rest,
+    input: Buffer.from(rest.input, 'utf8'),
+    output: Buffer.from(rest.output, 'utf8'),
+  };
+
   if (id) {
     return await prisma.testCase.update({
       where: { id },
