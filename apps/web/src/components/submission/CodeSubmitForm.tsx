@@ -52,8 +52,24 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
 
   // 外部からの初期コード反映 (Code Test等でのリセット用)
   useEffect(() => {
-    setCode(initialCode);
-    setIsBase64(initialIsBase64);
+    let finalCode = initialCode;
+    let finalIsBase64 = initialIsBase64;
+
+    // ファイル名がなく Base64 の場合は「転送用にエンコードされたテキスト」とみなしてデコードを試みる
+    if (initialIsBase64 && !initialFileName && initialCode) {
+      try {
+        const bin = atob(initialCode);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        finalCode = new TextDecoder().decode(bytes);
+        finalIsBase64 = false;
+      } catch (e) {
+        console.error('Failed to decode initial Base64 code', e);
+      }
+    }
+
+    setCode(finalCode);
+    setIsBase64(finalIsBase64);
     setFileName(initialFileName);
   }, [initialCode, initialIsBase64, initialFileName]);
 
@@ -167,7 +183,7 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
           )}
         </div>
 
-        {isBase64 ? (
+        {fileName ? (
           <div className="rounded-lg border-2 border-dashed border-blue-200 bg-blue-50 p-12 text-center">
             <Text strong className="block text-blue-600">
               {fileName} をアップロード済み
