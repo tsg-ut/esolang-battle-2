@@ -7,11 +7,12 @@ import { useParams } from 'next/navigation';
 import { LoginRequiredMessage } from '@/components/LoginRequiredMessage';
 import { CodeSubmitForm } from '@/components/submission/CodeSubmitForm';
 import { trpc } from '@/utils/trpc';
-import { Button, Popconfirm } from 'antd';
+import { App, Button, Popconfirm } from 'antd';
 
 export default function CodeTestPage() {
   const params = useParams();
   const contestId = Number(params.id);
+  const { message } = App.useApp();
 
   const { data: me, isLoading: isLoadingMe } = trpc.me.useQuery();
   const isLoggedIn = !!me;
@@ -88,8 +89,11 @@ export default function CodeTestPage() {
       setTestCodeText(data.code); // 状態を同期
       setIsBase64(data.isBase64);
       setFileName(data.fileName);
+      message.success('実行が完了しました');
     } catch (err) {
       console.error(err);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      message.error('実行に失敗しました: ' + errorMsg);
     }
   };
 

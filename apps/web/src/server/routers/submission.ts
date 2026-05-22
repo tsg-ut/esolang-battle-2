@@ -1,7 +1,9 @@
 import { getAvatarUrl } from '@/utils/user';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import {
+  MAX_CODE_SIZE,
   submissionFilterSchema,
   submissionIdSchema,
   submissionSummarySchema,
@@ -169,6 +171,15 @@ export const submissionRouter = router({
       return result;
     }),
   testCode: publicProcedure.input(testCodeSchema).mutation(async ({ input }) => {
+    // 1. サイズ制限のチェック
+    const codeBuffer = input.isBase64 ? Buffer.from(input.code, 'base64') : Buffer.from(input.code);
+    if (codeBuffer.length > MAX_CODE_SIZE) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Code size exceeds limit of ${MAX_CODE_SIZE / 1024 / 1024}MB`,
+      });
+    }
+
     const job = await testQueue.add('runTest', input);
     const result = (await job.waitUntilFinished(testQueueEvents)) as any;
 
@@ -184,6 +195,15 @@ export const submissionRouter = router({
       return await getSubmittableLanguageIdsForTeam(ctx.prisma, input.teamId, input.contestId);
     }),
   submitCode: protectedProcedure.input(submitCodeSchema).mutation(async ({ ctx, input }) => {
+    // 1. サイズ制限のチェック
+    const codeBuffer = input.isBase64 ? Buffer.from(input.code, 'base64') : Buffer.from(input.code);
+    if (codeBuffer.length > MAX_CODE_SIZE) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Code size exceeds limit of ${MAX_CODE_SIZE / 1024 / 1024}MB`,
+      });
+    }
+
     const submission = await createSubmission(ctx.prisma, {
       ...input,
       userId: ctx.user.id,

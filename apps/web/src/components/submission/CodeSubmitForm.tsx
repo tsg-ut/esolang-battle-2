@@ -5,6 +5,8 @@ import React, { useEffect, useState } from 'react';
 import { UploadOutlined } from '@ant-design/icons';
 import { App, Button, Select, Tag, Typography, Upload } from 'antd';
 
+import { MAX_CODE_SIZE } from '@esolang-battle/common';
+
 import { TextVizEditor } from './TextVizEditor';
 
 const { Text } = Typography;
@@ -74,24 +76,42 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
   }, [initialCode, initialIsBase64, initialFileName]);
 
   const handleFileUpload = (file: File) => {
-    const MAX_SIZE = 1 * 1024 * 1024; // 1MB
-    if (file.size > MAX_SIZE) {
-      message.error('ファイルサイズが大きすぎます (最大 1MB)');
+    if (file.size > MAX_CODE_SIZE) {
+      message.error(`ファイルサイズが大きすぎます (最大 ${MAX_CODE_SIZE / 1024 / 1024}MB)`);
       return false;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const result = e.target?.result;
-      if (typeof result === 'string') {
-        const base64Content = result.split(',')[1];
-        setCode(base64Content);
-        setIsBase64(true);
-        setFileName(file.name);
-        message.info(`ファイルを読み込みました: ${file.name}`);
+      const arrayBuffer = e.target?.result;
+      if (arrayBuffer instanceof ArrayBuffer) {
+        // 1. UTF-8 としてデコードを試みる
+        try {
+          const decoder = new TextDecoder('utf-8', { fatal: true });
+          const text = decoder.decode(arrayBuffer);
+
+          // 成功した場合はテキストとしてエディタにセット
+          setCode(text);
+          setIsBase64(false);
+          setFileName(file.name);
+          message.success(`ファイルからテキストを読み込みました: ${file.name}`);
+        } catch (err) {
+          // 2. UTF-8 ではない（バイナリ）場合は Base64 として保持
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64 = btoa(binary);
+
+          setCode(base64);
+          setIsBase64(true);
+          setFileName(file.name);
+          message.info(`バイナリファイルを読み込みました: ${file.name} (編集不可)`);
+        }
       }
     };
-    reader.readAsDataURL(file);
+    reader.readAsArrayBuffer(file);
     return false;
   };
 
@@ -104,7 +124,7 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
   const codeBytes = isBase64
     ? (code.length * 3) / 4 - (code.endsWith('==') ? 2 : code.endsWith('=') ? 1 : 0)
     : new TextEncoder().encode(code).length;
-  const isTooLarge = codeBytes > 1 * 1024 * 1024;
+  const isTooLarge = codeBytes > MAX_CODE_SIZE;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,7 +179,7 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
           />
         </div>
         <Upload beforeUpload={handleFileUpload} showUploadList={false} accept="*">
-          <Button icon={<UploadOutlined />}>Upload File (Max 1MB)</Button>
+          <Button icon={<UploadOutlined />}>ファイルからロード</Button>
         </Upload>
       </div>
 
@@ -178,26 +198,29 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
                 setIsBase64(false);
               }}
             >
-              File: {fileName}
+              Source: {fileName}
             </Tag>
           )}
         </div>
 
-        {fileName ? (
+        {isBase64 && fileName ? (
           <div className="rounded-lg border-2 border-dashed border-blue-200 bg-blue-50 p-12 text-center">
-            <Text strong className="block text-blue-600">
-              {fileName} をアップロード済み
+            <Text strong className="mb-2 block text-blue-600">
+              {fileName} (バイナリデータ) をロード済み
+            </Text>
+            <Text type="secondary" className="mb-6 block text-xs">
+              UTF-8として読み込めないため、エディタでは表示・編集できません。
             </Text>
             <Button
-              type="link"
-              danger
+              type="primary"
+              ghost
               onClick={() => {
                 setFileName(null);
                 setCode('');
                 setIsBase64(false);
               }}
             >
-              ファイルをクリアしてエディタに戻る
+              クリアしてエディタに戻る
             </Button>
           </div>
         ) : (
@@ -205,7 +228,7 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
             <TextVizEditor
               value={code}
               onChange={handleCodeChange}
-              placeholder="ここにコードを入力、またはファイルをアップロード..."
+              placeholder="ここにコードを入力、またはファイルをロード..."
               className="w-full"
             />
           </div>
@@ -214,7 +237,8 @@ export const CodeSubmitForm: React.FC<CodeSubmitFormProps> = ({
         <div className="mt-2 flex justify-end gap-4 text-xs text-gray-500">
           {!isBase64 && <span>文字数: {code.length} chars</span>}
           <span className={isTooLarge ? 'font-bold text-red-500' : ''}>
-            バイト数: {Math.round(codeBytes)} bytes {isTooLarge && '(Limit: 1MB)'}
+            バイト数: {Math.round(codeBytes)} bytes{' '}
+            {isTooLarge && `(Limit: ${MAX_CODE_SIZE / 1024 / 1024}MB)`}
           </span>
         </div>
       </div>

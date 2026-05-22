@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   BoardConfig,
   BoardState,
+  MAX_CODE_SIZE,
   listInContestSchema,
   listProblemsSchema,
   updateUserTeamSchema,
@@ -492,6 +493,11 @@ export const adminRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, code, ...data } = input;
       const codeBuffer = code !== undefined ? Buffer.from(code as string) : undefined;
+
+      if (codeBuffer && codeBuffer.length > MAX_CODE_SIZE) {
+        throw new Error(`Code size exceeds limit of ${MAX_CODE_SIZE / 1024 / 1024}MB`);
+      }
+
       return await ctx.prisma.submission.update({
         where: { id },
         data: {

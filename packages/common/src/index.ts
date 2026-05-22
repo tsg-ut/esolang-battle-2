@@ -43,6 +43,8 @@ export const submissionFilterSchema = z.object({
   offset: z.number().optional(),
 });
 
+export const MAX_CODE_SIZE = 1 * 1024 * 1024; // 1MB
+
 export const contestSummarySchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -101,7 +103,7 @@ export const boardSummarySchema = z.object({
 });
 
 export const testCodeSchema = z.object({
-  code: z.string(),
+  code: z.string().max(2 * 1024 * 1024), // Approx 2MB
   isBase64: z.boolean().optional(),
   languageId: z.number(),
   stdin: z.string().optional(),
@@ -200,22 +202,24 @@ export type ProblemSummary = {
 
 // --- Judge System Types ---
 
+export const caseCheckerInputSchema = z.object({
+  testCase: z.object({
+    input: z.string(),
+    expectedOutput: z.string(),
+    isSample: z.boolean(),
+  }),
+  execution: z.object({
+    stdout: z.string(),
+    stderr: z.string(),
+    exitCode: z.number(),
+    durationMs: z.number(),
+  }),
+  config: z.any().optional(),
+});
+
 export type JudgeStatus = 'AC' | 'WA' | 'TLE' | 'RE' | 'WJ';
 
-export type CaseCheckerInput = {
-  testCase: {
-    input: string;
-    expectedOutput: string;
-    isSample: boolean;
-  };
-  execution: {
-    stdout: string;
-    stderr: string;
-    exitCode: number;
-    durationMs: number;
-  };
-  config: any; // Problem.checkerConfig
-};
+export type CaseCheckerInput = z.infer<typeof caseCheckerInputSchema>;
 
 export type CaseCheckerOutput = {
   status: JudgeStatus;
