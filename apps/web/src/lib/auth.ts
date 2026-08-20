@@ -95,25 +95,53 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        // 初回サインイン時のみ user オブジェクトが渡される
-        token.id = user.id;
-        token.isAdmin = (user as any).isAdmin;
+      const userId = user?.id || token.id;
+
+      if (!userId) {
+        return token;
       }
 
-      // 常に DB から最新のチーム情報を取得 (または適宜キャッシュを考慮)
-      if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { isAdmin: true, teams: true },
-        });
-        if (dbUser) {
-          token.isAdmin = dbUser.isAdmin;
-          token.teams = dbUser.teams;
-        }
+      // 常に DB から最新のチーム情報を取得
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId as string },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isAdmin: true,
+          teams: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+              contestId: true,
+            },
+          },
+        },
+      });
+
+      if (dbUser) {
+        return {
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          isAdmin: dbUser.isAdmin,
+          teams: dbUser.teams.map((t) => ({
+            id: t.id,
+            name: t.name,
+            color: t.color,
+            contestId: t.contestId,
+          })),
+        };
       }
 
-      return token;
+      return {
+        id: userId,
+        name: token.name,
+        email: token.email,
+        isAdmin: (token as any).isAdmin ?? false,
+        teams: (token as any).teams ?? [],
+      };
     },
     async session({ session, token }) {
       if (session.user) {
