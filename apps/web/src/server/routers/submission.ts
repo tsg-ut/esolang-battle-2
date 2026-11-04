@@ -19,6 +19,7 @@ import {
 } from '@esolang-battle/db';
 
 import { ensureContestAccess } from '../function/contest';
+import { acquireExecutionSlot, releaseExecutionSlot } from '../function/executionSlot';
 import { getSubmittableLanguageIdsForTeam } from '../function/getSubmittableLanguages';
 import { submissionQueue, testQueue, testQueueEvents } from '../queue';
 import { protectedProcedure, publicProcedure, router } from '../trpc';
@@ -170,7 +171,7 @@ export const submissionRouter = router({
 
       return result;
     }),
-  testCode: protectedProcedure.input(testCodeSchema).mutation(async ({ input }) => {
+  testCode: protectedProcedure.input(testCodeSchema).mutation(async ({ ctx, input }) => {
     // 1. サイズ制限のチェック
     const codeBuffer = input.isBase64 ? Buffer.from(input.code, 'base64') : Buffer.from(input.code);
     if (codeBuffer.length > MAX_CODE_SIZE) {
@@ -180,14 +181,19 @@ export const submissionRouter = router({
       });
     }
 
-    const job = await testQueue.add('runTest', input);
-    const result = (await job.waitUntilFinished(testQueueEvents)) as any;
+    const slotId = await acquireExecutionSlot(ctx.user.id);
+    try {
+      const job = await testQueue.add('runTest', input);
+      const result = (await job.waitUntilFinished(testQueueEvents)) as any;
 
-    return {
-      ...result,
-      stdout: result.stdout ? Buffer.from(result.stdout).toString('utf8') : '',
-      stderr: result.stderr ? Buffer.from(result.stderr).toString('utf8') : '',
-    };
+      return {
+        ...result,
+        stdout: result.stdout ? Buffer.from(result.stdout).toString('utf8') : '',
+        stderr: result.stderr ? Buffer.from(result.stderr).toString('utf8') : '',
+      };
+    } finally {
+      await releaseExecutionSlot(ctx.user.id, slotId);
+    }
   }),
   getSubmittableLanguageIdsForTeam: protectedProcedure
     .input(submittableLanguageSchema)
@@ -204,11 +210,22 @@ export const submissionRouter = router({
       });
     }
 
-    const submission = await createSubmission(ctx.prisma, {
-      ...input,
-      userId: ctx.user.id,
-    });
-    await submissionQueue.add('evaluate', { submissionId: submission.id });
-    return submission;
+    const slotId = await acquireExecutionSlot(ctx.user.id);
+    try {
+      const submission = await createSubmission(ctx.prisma, {
+        ...input,
+        userId: ctx.user.id,
+      });
+      // 実行枠は判定の完了後にワーカーが解放する
+      await submissionQueue.add('evaluate', {
+        submissionId: submission.id,
+        userId: ctx.user.id,
+        slotId,
+      });
+      return submission;
+    } catch (err) {
+      await releaseExecutionSlot(ctx.user.id, slotId);
+      throw err;
+    }
   }),
 });
