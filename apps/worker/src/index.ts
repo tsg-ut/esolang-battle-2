@@ -1,6 +1,8 @@
 import { Job, Worker } from 'bullmq';
 import 'dotenv/config';
 
+import { getExecutionSlotKey } from '@esolang-battle/common';
+
 import { syncBoardWithSubmissions } from './jobs/board';
 import { processSubmission } from './jobs/submission';
 import { TestJobData, processTest } from './jobs/test';
@@ -10,11 +12,23 @@ import { connection } from './queue';
 // --- Types ---
 type SubmissionJobData = {
   submissionId: number;
+  // 再判定のジョブには実行枠がない
+  userId?: string;
+  slotId?: string;
 };
 
 type BoardUpdateJobData = {
   boardId: number;
 };
+
+function releaseSubmissionSlot(job: Job<SubmissionJobData>) {
+  const { userId, slotId } = job.data;
+  if (!userId || !slotId) return;
+
+  connection
+    .zrem(getExecutionSlotKey(userId), slotId)
+    .catch((err) => console.error(`Failed to release execution slot ${slotId}:`, err));
+}
 
 // --- Main Startup ---
 
@@ -57,6 +71,7 @@ async function main() {
 
   submissionWorker.on('completed', (job) => {
     console.log(`Submission job ${job.id} completed!`);
+    releaseSubmissionSlot(job);
   });
 
   testWorker.on('completed', (job) => {
@@ -69,6 +84,11 @@ async function main() {
 
   submissionWorker.on('failed', (job, err) => {
     console.error(`Submission job ${job?.id} failed with ${err.message}`);
+    // 再試行が残っている間は枠を保持する。finishedOn は再試行せずに失敗が確定したときだけ設定される
+    // (再試行の使い切りに加えて、UnrecoverableError や discard() の場合も含む)
+    if (job?.finishedOn) {
+      releaseSubmissionSlot(job);
+    }
   });
 
   testWorker.on('failed', (job, err) => {
