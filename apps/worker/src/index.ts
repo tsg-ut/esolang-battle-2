@@ -84,8 +84,9 @@ async function main() {
 
   submissionWorker.on('failed', (job, err) => {
     console.error(`Submission job ${job?.id} failed with ${err.message}`);
-    // 再試行が残っている間は枠を保持する
-    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+    // 再試行が残っている間は枠を保持する。finishedOn は再試行せずに失敗が確定したときだけ設定される
+    // (再試行の使い切りに加えて、UnrecoverableError や discard() の場合も含む)
+    if (job?.finishedOn) {
       releaseSubmissionSlot(job);
     }
   });
