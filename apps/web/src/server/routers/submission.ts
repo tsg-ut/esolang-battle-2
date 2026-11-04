@@ -170,7 +170,7 @@ export const submissionRouter = router({
 
       return result;
     }),
-  testCode: publicProcedure.input(testCodeSchema).mutation(async ({ input }) => {
+  testCode: protectedProcedure.input(testCodeSchema).mutation(async ({ input }) => {
     // 1. サイズ制限のチェック
     const codeBuffer = input.isBase64 ? Buffer.from(input.code, 'base64') : Buffer.from(input.code);
     if (codeBuffer.length > MAX_CODE_SIZE) {

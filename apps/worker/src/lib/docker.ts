@@ -18,6 +18,15 @@ export type TestCaseWithIO = {
 const DEFAULT_TIMEOUT_MS = 20000; // 20s
 const MEMORY_LIMIT = 512 * 1024 * 1024; // 512MB
 const BATCH_MEMORY_LIMIT = 1024 * 1024 * 1024; // 1GB
+// 全言語のイメージで計測した実行時の pids.peak は最大 56 (F#、6 CPU 相当)。
+// Go と Elixir は CPU 数に比例して増え、12 CPU 相当では 76 になる。fork bomb もこの値で止まる
+const PIDS_LIMIT = 512;
+// 計測した最大のファイルは Go のビルドキャッシュの約 12MB。stdout もこの制限を受ける
+const FILE_SIZE_LIMIT = 256 * 1024 * 1024; // 256MB
+// CapDrop: ['ALL'] から戻す権限。
+// SYS_CHROOT: esolang/bash-busybox が jailkit (jk_chrootlaunch) で chroot するため
+// DAC_OVERRIDE: esolang/abc の /root/ABC/abc が uid 1001 所有かつ 0744 で、所有者以外の root は実行できないため
+const CAP_ADD = ['SYS_CHROOT', 'DAC_OVERRIDE'];
 
 /**
  * Tar helper: Create a tarball buffer from a record of files
@@ -88,7 +97,12 @@ const WORKER_LABEL = { 'com.esolang-battle.container-type': 'worker-task' };
 const getHostConfig = (memoryLimit: number): Docker.HostConfig => ({
   Memory: memoryLimit,
   MemorySwap: memoryLimit,
+  PidsLimit: PIDS_LIMIT,
+  CapDrop: ['ALL'],
+  CapAdd: CAP_ADD,
+  SecurityOpt: ['no-new-privileges'],
   Ulimits: [
+    { Name: 'fsize', Soft: FILE_SIZE_LIMIT, Hard: FILE_SIZE_LIMIT },
     { Name: 'nofile', Soft: 65535, Hard: 65535 },
     { Name: 'nproc', Soft: 4096, Hard: 8192 },
   ],
