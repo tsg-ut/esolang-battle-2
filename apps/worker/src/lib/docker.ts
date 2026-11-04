@@ -18,6 +18,9 @@ export type TestCaseWithIO = {
 const DEFAULT_TIMEOUT_MS = 20000; // 20s
 const MEMORY_LIMIT = 512 * 1024 * 1024; // 512MB
 const BATCH_MEMORY_LIMIT = 1024 * 1024 * 1024; // 1GB
+const NANO_CPUS = 2 * 1000 * 1000 * 1000; // 2 CPUs
+const PIDS_LIMIT = 512;
+const FILE_SIZE_LIMIT = 256 * 1024 * 1024; // 256MB
 
 /**
  * Tar helper: Create a tarball buffer from a record of files
@@ -88,7 +91,12 @@ const WORKER_LABEL = { 'com.esolang-battle.container-type': 'worker-task' };
 const getHostConfig = (memoryLimit: number): Docker.HostConfig => ({
   Memory: memoryLimit,
   MemorySwap: memoryLimit,
+  NanoCpus: NANO_CPUS,
+  PidsLimit: PIDS_LIMIT,
+  CapDrop: ['ALL'],
+  SecurityOpt: ['no-new-privileges'],
   Ulimits: [
+    { Name: 'fsize', Soft: FILE_SIZE_LIMIT, Hard: FILE_SIZE_LIMIT },
     { Name: 'nofile', Soft: 65535, Hard: 65535 },
     { Name: 'nproc', Soft: 4096, Hard: 8192 },
   ],
