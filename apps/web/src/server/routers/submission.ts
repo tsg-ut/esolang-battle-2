@@ -20,7 +20,6 @@ import {
 
 import { ensureContestAccess } from '../function/contest';
 import { getSubmittableLanguageIdsForTeam } from '../function/getSubmittableLanguages';
-import { enforceTestCodeRateLimit } from '../function/rateLimit';
 import { submissionQueue, testQueue, testQueueEvents } from '../queue';
 import { protectedProcedure, publicProcedure, router } from '../trpc';
 
@@ -171,7 +170,7 @@ export const submissionRouter = router({
 
       return result;
     }),
-  testCode: protectedProcedure.input(testCodeSchema).mutation(async ({ ctx, input }) => {
+  testCode: protectedProcedure.input(testCodeSchema).mutation(async ({ input }) => {
     // 1. サイズ制限のチェック
     const codeBuffer = input.isBase64 ? Buffer.from(input.code, 'base64') : Buffer.from(input.code);
     if (codeBuffer.length > MAX_CODE_SIZE) {
@@ -180,8 +179,6 @@ export const submissionRouter = router({
         message: `Code size exceeds limit of ${MAX_CODE_SIZE / 1024 / 1024}MB`,
       });
     }
-
-    await enforceTestCodeRateLimit(ctx.user.id);
 
     const job = await testQueue.add('runTest', input);
     const result = (await job.waitUntilFinished(testQueueEvents)) as any;
