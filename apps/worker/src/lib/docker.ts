@@ -325,9 +325,9 @@ export async function runJudgeScript(
     if (isTimeout) throw new Error('Judge script timeout');
 
     try {
-      return JSON.parse(output.stdout.trim());
+      return JSON.parse(output.stdout.toString('utf8').trim());
     } catch (e) {
-      console.error('Failed to parse judge script output:', output.stdout);
+      console.error('Failed to parse judge script output:', output.stdout.toString('utf8'));
       throw new Error(`Invalid JSON from judge script: ${output.stderr}`);
     }
   } catch (err) {

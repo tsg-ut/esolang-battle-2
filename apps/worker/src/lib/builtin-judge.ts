@@ -63,8 +63,8 @@ export function runBuiltinChecker(name: string, input: CaseCheckerInput): CaseCh
     }
 
     case 'IGNORE_CASE': {
-      const a = actualBuf.toString('utf8').toLowerCase().trim();
-      const e = expectedBuf.toString('utf8').toLowerCase().trim();
+      const a = actual.toLowerCase().trim();
+      const e = expected.toLowerCase().trim();
       return a === e
         ? { status: 'AC', score: 1, message: exitCodeMessage || undefined }
         : {
@@ -75,8 +75,8 @@ export function runBuiltinChecker(name: string, input: CaseCheckerInput): CaseCh
     }
 
     case 'FLOAT': {
-      const aText = actualBuf.toString('utf8').trim();
-      const eText = expectedBuf.toString('utf8').trim();
+      const aText = actual.trim();
+      const eText = expected.trim();
       const actualNum = parseFloat(aText);
       const expectedNum = parseFloat(eText);
       const epsilon = config.epsilon || 1e-7;
@@ -94,8 +94,8 @@ export function runBuiltinChecker(name: string, input: CaseCheckerInput): CaseCh
     }
 
     case 'CONTAINS': {
-      const a = actualBuf.toString('utf8');
-      const e = expectedBuf.toString('utf8');
+      const a = actual;
+      const e = expected;
       return a.includes(e)
         ? { status: 'AC', score: 1, message: exitCodeMessage || undefined }
         : {
