@@ -45,6 +45,21 @@ export const submissionFilterSchema = z.object({
 
 export const MAX_CODE_SIZE = 1 * 1024 * 1024; // 1MB
 
+export const AVATAR_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+export const MAX_AVATAR_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+export const MAX_AVATAR_DATA_URL_LENGTH = 3 * 1024 * 1024; // Approx 2MB (handles Base64 overhead)
+
+const AVATAR_DATA_URL_PATTERN =
+  /^data:(image\/(?:png|jpeg|gif|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
+
+/**
+ * アバターとして許可するデータURLを解析する。許可しない形式の場合は null を返す
+ */
+export function parseAvatarDataUrl(value: string): { contentType: string; base64: string } | null {
+  const match = value.match(AVATAR_DATA_URL_PATTERN);
+  return match ? { contentType: match[1], base64: match[2] } : null;
+}
+
 export const contestSummarySchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -106,7 +121,7 @@ export const testCodeSchema = z.object({
   code: z.string().max(2 * 1024 * 1024), // Approx 2MB
   isBase64: z.boolean().optional(),
   languageId: z.number(),
-  stdin: z.string().optional(),
+  stdin: z.string().max(MAX_CODE_SIZE).optional(),
 });
 
 export const submitCodeSchema = z.object({

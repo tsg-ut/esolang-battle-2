@@ -31,6 +31,8 @@ import {
   Upload,
 } from 'antd';
 
+import { AVATAR_MIME_TYPES, MAX_AVATAR_FILE_SIZE } from '@esolang-battle/common';
+
 const { Title, Text } = Typography;
 
 export default function UserSettingsPage() {
@@ -84,7 +86,8 @@ export default function UserSettingsPage() {
     try {
       await updateMeMutation.mutateAsync({
         name: values.name,
-        image: previewImage || undefined,
+        // fullUser.image は配信用のURLなので、変更がなければ送らない
+        image: previewImage && previewImage !== fullUser?.image ? previewImage : undefined,
       });
 
       await updateSession();
@@ -153,6 +156,16 @@ export default function UserSettingsPage() {
                 <Space>
                   <Upload
                     beforeUpload={(file) => {
+                      if (!AVATAR_MIME_TYPES.includes(file.type)) {
+                        message.error('PNG, JPEG, GIF, WebP の画像のみ設定できます');
+                        return false;
+                      }
+                      if (file.size > MAX_AVATAR_FILE_SIZE) {
+                        message.error(
+                          `画像サイズは ${MAX_AVATAR_FILE_SIZE / 1024 / 1024}MB 以下にしてください`
+                        );
+                        return false;
+                      }
                       const reader = new FileReader();
                       reader.readAsDataURL(file);
                       reader.onload = () => {
@@ -162,7 +175,7 @@ export default function UserSettingsPage() {
                     }}
                     maxCount={1}
                     showUploadList={false}
-                    accept="image/*"
+                    accept={AVATAR_MIME_TYPES.join(',')}
                   >
                     <Button icon={<UploadOutlined />}>画像をアップロード</Button>
                   </Upload>
