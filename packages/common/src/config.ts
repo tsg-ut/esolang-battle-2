@@ -21,6 +21,10 @@ export const REDIS_CONFIG = {
   },
 };
 
+// Execution Limits (コードテストと提出の合計)
+export const MAX_CONCURRENT_EXECUTIONS_PER_USER = 2;
+export const getExecutionSlotKey = (userId: string) => `execution-slots:${userId}`;
+
 // Default BullMQ Job Options
 export const DEFAULT_JOB_OPTIONS = {
   attempts: 3,
