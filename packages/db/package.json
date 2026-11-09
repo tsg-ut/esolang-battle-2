@@ -17,7 +17,8 @@
     "generate": "pnpm exec prisma generate",
     "migrate": "pnpm exec prisma migrate dev",
     "studio": "pnpm exec prisma studio",
-    "seed": "pnpm exec prisma db seed"
+    "seed": "pnpm exec prisma db seed",
+    "check:types": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",

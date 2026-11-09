@@ -19,7 +19,8 @@
     "format": "prettier --write .",
     "check-format": "prettier --check .",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "check:types": "pnpm run build:common && pnpm run build:db && pnpm -r --no-bail run check:types"
   },
   "type": "module",
   "devDependencies": {
