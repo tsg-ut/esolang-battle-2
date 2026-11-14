@@ -2,19 +2,38 @@
 
 import React, { useMemo } from 'react';
 
-import { useRouter } from 'next/navigation';
-
-import { Button, Popover, Space } from 'antd';
+import { Popover } from 'antd';
 
 import { BoardState, HoneycombBoardConfig } from '@esolang-battle/common';
+
+import {
+  BoardTeam,
+  CellLabel,
+  CellMenu,
+  OwnerAvatars,
+  TeamStatsBar,
+  getCellStyle,
+  useCellKeyDown,
+  useTeamStats,
+} from './shared';
 
 type HoneycombBoardProps = {
   config: HoneycombBoardConfig;
   state: BoardState;
   contestId: number;
   teamColors: Record<number, string>;
-  teams?: { id: number; name: string; color: string }[];
+  teams?: BoardTeam[];
 };
+
+/** 六角形の中心間の基準サイズ (px)。config.size で上書き可能 */
+const DEFAULT_HEX_SIZE = 64;
+/** 隣接セル間の隙間 (px)。GridBoard の gap-2 と揃える */
+const CELL_GAP = 8;
+/** 盤面外周の余白 (px)。hover 時の拡大がはみ出さないように */
+const BOARD_PADDING = 8;
+
+/** フラットトップ六角形 */
+const HEX_CLIP_PATH = 'polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)';
 
 export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({
   config,
@@ -23,195 +42,113 @@ export const HoneycombBoard: React.FC<HoneycombBoardProps> = ({
   teamColors,
   teams,
 }) => {
-  const router = useRouter();
   const { cellIds, cellInfo } = config;
+  const teamStats = useTeamStats(state);
+  const onCellKeyDown = useCellKeyDown(contestId);
 
-  const teamStats = useMemo(() => {
-    const counts: Record<number, number> = {};
-    Object.values(state).forEach((cell) => {
-      cell.ownerTeamIds.forEach((teamId) => {
-        counts[teamId] = (counts[teamId] || 0) + 1;
+  const layout = useMemo(() => {
+    const size = config.size ?? DEFAULT_HEX_SIZE;
+    // 平行な辺同士の距離が CELL_GAP になるように描画半径を縮める
+    const radius = size - CELL_GAP / Math.sqrt(3);
+    const cellWidth = 2 * radius;
+    const cellHeight = Math.sqrt(3) * radius;
+
+    const cells = cellIds
+      .filter((id) => cellInfo[id])
+      .map((id) => {
+        const { q, r } = cellInfo[id];
+        return {
+          id,
+          cx: size * 1.5 * q,
+          cy: size * Math.sqrt(3) * (r + q / 2),
+        };
       });
-    });
-    return counts;
-  }, [state]);
 
-  const renderCellMenu = (cellId: string, languageId: number, label: string) => {
-    const cell = state[cellId];
-    const submissionId = cell?.submissionIds?.[0];
+    if (cells.length === 0) return { cells: [], width: 0, height: 0, cellWidth, cellHeight };
 
-    return (
-      <Space direction="vertical" style={{ width: 180 }}>
-        {submissionId && (
-          <Button
-            type="primary"
-            block
-            onClick={() => router.push(`/contest/${contestId}/submissions/${submissionId}`)}
-          >
-            提出の詳細を見る
-          </Button>
-        )}
-        <Button
-          block
-          onClick={() => router.push(`/contest/${contestId}/submit?languageId=${languageId}`)}
-        >
-          この言語で提出する
-        </Button>
-        <Button
-          block
-          onClick={() =>
-            router.push(`/contest/${contestId}/submissions?languageId=${languageId}&scope=all`)
-          }
-        >
-          提出一覧 ({label})
-        </Button>
-      </Space>
-    );
-  };
+    const minX = Math.min(...cells.map((c) => c.cx)) - cellWidth / 2;
+    const maxX = Math.max(...cells.map((c) => c.cx)) + cellWidth / 2;
+    const minY = Math.min(...cells.map((c) => c.cy)) - cellHeight / 2;
+    const maxY = Math.max(...cells.map((c) => c.cy)) + cellHeight / 2;
 
-  const getCellStyle = (cell: any): React.CSSProperties => {
-    const owners = cell?.ownerTeamIds || [];
-    if (owners.length === 0) return { fill: '#eee', stroke: '#ccc' };
-
-    if (owners.length === 1) {
-      return { fill: teamColors[owners[0]] || '#4b5563', stroke: 'rgba(0,0,0,0.1)' };
-    }
-
-    // 複数所有の場合はパターンのIDを返す (SVGのdefsで定義)
-    return { fill: `url(#pattern-${owners.join('-')})`, stroke: 'rgba(0,0,0,0.2)' };
-  };
-
-  // 複数所有パターンの生成
-  const renderPatterns = () => {
-    const multiOwnerCells = Object.values(state).filter((c) => c.ownerTeamIds.length > 1);
-    const uniqueOwnerCombos = Array.from(
-      new Set(multiOwnerCells.map((c) => c.ownerTeamIds.join('-')))
-    );
-
-    return (
-      <defs>
-        {uniqueOwnerCombos.map((combo) => {
-          const owners = combo.split('-').map(Number);
-          const colors = owners.map((id) => teamColors[id] || '#4b5563');
-          const stripeWidth = 10 / colors.length;
-          return (
-            <pattern
-              key={combo}
-              id={`pattern-${combo}`}
-              patternUnits="userSpaceOnUse"
-              width="10"
-              height="10"
-              patternTransform="rotate(45)"
-            >
-              {colors.map((color, i) => (
-                <rect
-                  key={i}
-                  x={i * stripeWidth}
-                  y="0"
-                  width={stripeWidth}
-                  height="10"
-                  fill={color}
-                />
-              ))}
-            </pattern>
-          );
-        })}
-      </defs>
-    );
-  };
-
-  // 六角形の描画ヘルパー
-  const getHexPoints = (q: number, r: number, size: number) => {
-    const x = size * ((3 / 2) * q);
-    const y = size * ((Math.sqrt(3) / 2) * q + Math.sqrt(3) * r);
-    const points = [];
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 180) * (60 * i);
-      points.push(`${x + size * Math.cos(angle)},${y + size * Math.sin(angle)}`);
-    }
-    return { points: points.join(' '), x, y };
-  };
-
-  const HEX_SIZE = 40;
+    return {
+      cells: cells.map((c) => ({
+        id: c.id,
+        left: c.cx - cellWidth / 2 - minX + BOARD_PADDING,
+        top: c.cy - cellHeight / 2 - minY + BOARD_PADDING,
+      })),
+      width: maxX - minX + BOARD_PADDING * 2,
+      height: maxY - minY + BOARD_PADDING * 2,
+      cellWidth,
+      cellHeight,
+    };
+  }, [cellIds, cellInfo, config.size]);
 
   return (
-    <div className="flex h-full w-full flex-col items-center gap-6">
-      <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-visible">
-        <svg viewBox="-250 -250 500 500" className="h-full max-h-[70vh] w-full">
-          {renderPatterns()}
-          {cellIds.map((id) => {
+    <div className="flex w-full flex-col items-center gap-6 py-4">
+      {/* 盤面エリア: 横スクロール可能にするために w-full + overflow-x-auto */}
+      <div className="flex w-full items-start justify-center overflow-x-auto p-2">
+        <div className="relative shrink-0" style={{ width: layout.width, height: layout.height }}>
+          {layout.cells.map(({ id, left, top }) => {
             const info = cellInfo[id];
             const cell = state[id];
-            if (!info) return null;
-            const { points, x, y } = getHexPoints(info.q, info.r, HEX_SIZE);
+            const isLanguageCell = info.languageId !== undefined;
 
             const cellContent = (
-              <g className="cursor-pointer transition-all hover:opacity-80">
-                <polygon points={points} style={getCellStyle(cell)} strokeWidth="1" />
-                <text
-                  x={x}
-                  y={y - 5}
-                  textAnchor="middle"
-                  className="fill-white text-[10px] font-black"
-                  style={{ pointerEvents: 'none', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+              <div
+                key={id}
+                role={isLanguageCell ? 'button' : undefined}
+                tabIndex={isLanguageCell ? 0 : undefined}
+                className={`absolute drop-shadow-sm transition-all hover:z-10 hover:scale-[1.03] ${isLanguageCell ? 'cursor-pointer' : ''}`}
+                style={{ left, top, width: layout.cellWidth, height: layout.cellHeight }}
+                onKeyDown={onCellKeyDown(info.languageId)}
+              >
+                <div
+                  className="z-0 flex h-full w-full flex-col items-center justify-center px-[16%] py-1.5 text-center"
+                  style={{
+                    ...getCellStyle(cell?.ownerTeamIds, teamColors),
+                    clipPath: HEX_CLIP_PATH,
+                  }}
                 >
-                  {info.label}
-                </text>
-                {cell?.score !== null && (
-                  <text
-                    x={x}
-                    y={y + 10}
-                    textAnchor="middle"
-                    className="fill-white text-[8px] font-bold opacity-80"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {cell.score}
-                  </text>
-                )}
-              </g>
+                  <CellLabel label={info.label} cell={cell} />
+                </div>
+
+                {/* 所有ユーザーのアバターを表示 */}
+                <OwnerAvatars
+                  cell={cell}
+                  className="absolute bottom-0.5 left-1/2 -translate-x-1/2"
+                />
+              </div>
             );
 
             if (info.languageId !== undefined) {
               return (
                 <Popover
                   key={id}
-                  content={renderCellMenu(id, info.languageId, info.label)}
+                  content={
+                    <CellMenu
+                      cell={cell}
+                      contestId={contestId}
+                      languageId={info.languageId}
+                      label={info.label}
+                    />
+                  }
                   title={info.label}
                   trigger="click"
+                  placement="right"
                 >
                   {cellContent}
                 </Popover>
               );
             }
 
-            return <g key={id}>{cellContent}</g>;
+            return cellContent;
           })}
-        </svg>
+        </div>
       </div>
 
-      {teams && teams.length > 0 && (
-        <div className="flex shrink-0 items-center justify-center gap-6 rounded-xl border border-gray-100 bg-white px-8 py-3 shadow-lg">
-          {teams.map((team, idx) => (
-            <React.Fragment key={team.id}>
-              <div className="flex items-center gap-4">
-                <div
-                  className="h-4 w-4 rounded-full border border-gray-200 shadow-inner"
-                  style={{ backgroundColor: team.color }}
-                />
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-bold tracking-wider text-gray-400 uppercase">
-                    {team.name || `Team ${team.id}`}
-                  </span>
-                  <span className="font-mono text-3xl leading-none font-black text-gray-800">
-                    {teamStats[team.id] || 0}
-                  </span>
-                </div>
-              </div>
-              {idx < teams.length - 1 && <div className="mx-2 h-6 w-px bg-gray-200" />}
-            </React.Fragment>
-          ))}
-        </div>
-      )}
+      {/* チームの戦況表示 */}
+      <TeamStatsBar teams={teams} teamStats={teamStats} />
     </div>
   );
 };
