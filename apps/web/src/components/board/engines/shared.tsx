@@ -112,21 +112,41 @@ export function OwnerAvatars({
   );
 }
 
-/** セルクリック時のメニュー */
+type CellTarget = { languageId?: number; problemId?: number };
+
+/** 対象 (言語・問題) を絞り込むクエリ文字列 */
+function toTargetQuery({ languageId, problemId }: CellTarget) {
+  const params = new URLSearchParams();
+  if (problemId !== undefined) params.set('problemId', String(problemId));
+  if (languageId !== undefined) params.set('languageId', String(languageId));
+  return params.toString();
+}
+
+function getSubmitButtonLabel({ languageId, problemId }: CellTarget) {
+  if (problemId !== undefined && languageId !== undefined) return 'この問題・言語で提出する';
+  if (problemId !== undefined) return 'この問題に提出する';
+  return 'この言語で提出する';
+}
+
+/** セルクリック時のメニュー。languageId / problemId の少なくとも一方を指定する */
 export function CellMenu({
   cell,
   contestId,
   languageId,
+  problemId,
   label,
 }: {
   cell: BoardCell | undefined;
   contestId: number;
-  languageId: number;
+  languageId?: number;
+  problemId?: number;
   label: string;
 }) {
   const router = useRouter();
   // 最新の提出（オーナーがいる場合）
   const submissionId = cell?.submissionIds?.[0];
+  const target = { languageId, problemId };
+  const query = toTargetQuery(target);
 
   return (
     <Space direction="vertical" style={{ width: 180 }}>
@@ -139,17 +159,12 @@ export function CellMenu({
           提出の詳細を見る
         </Button>
       )}
-      <Button
-        block
-        onClick={() => router.push(`/contest/${contestId}/submit?languageId=${languageId}`)}
-      >
-        この言語で提出する
+      <Button block onClick={() => router.push(`/contest/${contestId}/submit?${query}`)}>
+        {getSubmitButtonLabel(target)}
       </Button>
       <Button
         block
-        onClick={() =>
-          router.push(`/contest/${contestId}/submissions?languageId=${languageId}&scope=all`)
-        }
+        onClick={() => router.push(`/contest/${contestId}/submissions?${query}&scope=all`)}
       >
         提出一覧 ({label})
       </Button>
@@ -157,13 +172,16 @@ export function CellMenu({
   );
 }
 
-/** 言語セルのキーボード操作: Enter / Space で提出画面へ */
+/** 対象セルのキーボード操作: Enter / Space で提出画面へ */
 export function useCellKeyDown(contestId: number) {
   const router = useRouter();
-  return (languageId: number | undefined) => (e: React.KeyboardEvent) => {
-    if (languageId !== undefined && (e.key === 'Enter' || e.key === ' ')) {
+  return (languageId: number | undefined, problemId?: number) => (e: React.KeyboardEvent) => {
+    if (
+      (languageId !== undefined || problemId !== undefined) &&
+      (e.key === 'Enter' || e.key === ' ')
+    ) {
       e.preventDefault();
-      router.push(`/contest/${contestId}/submit?languageId=${languageId}`);
+      router.push(`/contest/${contestId}/submit?${toTargetQuery({ languageId, problemId })}`);
     }
   };
 }
@@ -172,9 +190,12 @@ export function useCellKeyDown(contestId: number) {
 export function TeamStatsBar({
   teams,
   teamStats,
+  subStats,
 }: {
   teams?: BoardTeam[];
   teamStats: Record<number, number>;
+  /** 数値の横に小さく添える補足 (任意) */
+  subStats?: Record<number, string>;
 }) {
   if (!teams || teams.length === 0) return null;
 
@@ -194,6 +215,9 @@ export function TeamStatsBar({
               <span className="font-mono text-3xl leading-none font-black text-gray-800">
                 {teamStats[team.id] || 0}
               </span>
+              {subStats?.[team.id] && (
+                <span className="text-xs font-bold text-gray-400">{subStats[team.id]}</span>
+              )}
             </div>
           </div>
           {idx < teams.length - 1 && <div className="mx-2 h-6 w-px bg-gray-200" />}

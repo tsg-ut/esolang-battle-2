@@ -104,7 +104,8 @@ export abstract class BaseBoardEngine<
   }
 
   protected isStartingCell(config: TConfig, cellId: string, teamId: number): boolean {
-    const startingCells = (config.startingPositions?.[String(teamId)] || []) as string[];
+    const startingPositions = 'startingPositions' in config ? config.startingPositions : undefined;
+    const startingCells = (startingPositions?.[String(teamId)] || []) as string[];
     return startingCells.includes(cellId);
   }
 

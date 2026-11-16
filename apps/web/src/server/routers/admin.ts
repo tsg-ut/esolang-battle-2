@@ -1,8 +1,11 @@
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import {
   BoardConfig,
+  BoardConfigSchemas,
   BoardState,
+  BoardType,
   MAX_CODE_SIZE,
   listInContestSchema,
   listProblemsSchema,
@@ -404,6 +407,24 @@ export const adminRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
+
+      // ボード種別ごとのスキーマで config を検証する
+      const boardType = BoardType.safeParse(data.type);
+      if (!boardType.success) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: `Unknown board type: ${data.type}` });
+      }
+      const parsed = BoardConfigSchemas[boardType.data].safeParse(data.config);
+      if (!parsed.success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Invalid board config:\n' +
+            parsed.error.issues
+              .map((issue) => `- ${issue.path.join('.') || '(root)'}: ${issue.message}`)
+              .join('\n'),
+        });
+      }
+
       if (id) {
         return await ctx.prisma.board.update({
           where: { id },

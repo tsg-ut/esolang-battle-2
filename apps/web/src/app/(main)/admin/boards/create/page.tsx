@@ -59,6 +59,7 @@ export default function BoardCreate() {
               { label: 'GRID', value: 'GRID' },
               { label: 'HONEYCOMB', value: 'HONEYCOMB' },
               { label: 'CROSS_GRID', value: 'CROSS_GRID' },
+              { label: 'TEAM_TARGET', value: 'TEAM_TARGET' },
             ]}
           />
         </Form.Item>

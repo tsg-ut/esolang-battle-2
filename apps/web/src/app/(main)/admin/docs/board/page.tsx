@@ -79,6 +79,44 @@ export default function BoardDocsPage() {
     },
   ];
 
+  const teamTargetFields = [
+    { key: '1', name: 'width', type: 'number', desc: 'ボードの横幅（セルの数）。' },
+    { key: '2', name: 'height', type: 'number', desc: 'ボードの縦幅（セルの数）。' },
+    {
+      key: '3',
+      name: 'defaultScore',
+      type: 'number',
+      desc: 'score を省略した目標セルの獲得点数（オプション）。デフォルト: 1',
+    },
+    {
+      key: '4',
+      name: 'cells',
+      type: 'Record<"x_y", object>',
+      desc: '各セルの定義。teamId / languageId / problemId / label / score の組み合わせでセルの種類が決まります（下表）。',
+    },
+  ];
+
+  const teamTargetCellKinds = [
+    {
+      key: '1',
+      name: '目標セル',
+      type: '{ teamId, languageId?, problemId?, label?, score? }',
+      desc: 'languageId / problemId の少なくとも一方を指定します。そのチームのメンバーが指定した条件（省略した方は任意）を満たす提出で AC すると獲得し、score 点（省略時は defaultScore）を得ます。未獲得の間はチーム色を薄く表示します。',
+    },
+    {
+      key: '2',
+      name: '固定セル',
+      type: '{ teamId, label? }',
+      desc: '最初からそのチームが所有し、塗り替えられないセル。得点には含まれません。',
+    },
+    {
+      key: '3',
+      name: 'ラベルセル',
+      type: '{ label }',
+      desc: '見出しなどの表示専用セル。',
+    },
+  ];
+
   const cellStateFields = [
     {
       key: '1',
@@ -221,6 +259,96 @@ export default function BoardDocsPage() {
                 problemInfo: { '1': 'Problem A', '2': 'Problem B' },
                 languageInfo: { '1': 'Brainfuck', '2': 'Python' },
                 allowMultiOwner: true,
+              },
+              null,
+              2
+            )}
+          </CodeBlock>
+        </Card>
+      ),
+    },
+    {
+      key: 'teamtarget',
+      label: 'TEAM_TARGET Board',
+      children: (
+        <Card className="mt-4 shadow-sm">
+          <Paragraph>
+            各セルに「チーム × 言語 / 問題」を割り当てたボードです。<b>隣接ルールはありません。</b>{' '}
+            チームのメンバーがセルの条件を満たす提出で AC するとセルを獲得し、config
+            で指定した点数を得ます。一度獲得したセルは失われず、同じセルに AC
+            したメンバーは全員記録されます。制限時間内にどれだけ多くの言語・問題で AC
+            できたかを競う用途を想定しています。
+          </Paragraph>
+          <ul className="mb-4 list-disc pl-6 text-sm text-gray-600">
+            <li>
+              <Text code>{'{ teamId, languageId }'}</Text>: その言語で（どの問題でも）AC すれば獲得
+            </li>
+            <li>
+              <Text code>{'{ teamId, problemId }'}</Text>: その問題に（どの言語でも）AC すれば獲得
+            </li>
+            <li>
+              <Text code>{'{ teamId, problemId, languageId }'}</Text>: その問題にその言語で AC
+              したときのみ獲得
+            </li>
+          </ul>
+          <Paragraph type="secondary">
+            1 つの提出が複数のセルの条件を満たす場合は、そのすべてに反映されます。共通設定項目の{' '}
+            <Text code>allowMultiOwner</Text> / <Text code>startingPositions</Text>{' '}
+            は使用しません（初期所有は固定セルで表現します）。同じ「チーム × 言語 ×
+            問題」の組み合わせを複数のセルに割り当てると保存時にエラーになります。
+          </Paragraph>
+          <Table
+            dataSource={teamTargetFields}
+            pagination={false}
+            size="small"
+            className="mb-4"
+            columns={[
+              {
+                title: 'Property',
+                dataIndex: 'name',
+                key: 'name',
+                render: (t) => <Text code>{t}</Text>,
+              },
+              { title: 'Type', dataIndex: 'type', key: 'type' },
+              { title: 'Description', dataIndex: 'desc', key: 'desc' },
+            ]}
+          />
+          <Table
+            dataSource={teamTargetCellKinds}
+            pagination={false}
+            size="small"
+            className="mb-4"
+            columns={[
+              { title: 'Cell', dataIndex: 'name', key: 'name' },
+              {
+                title: 'Shape',
+                dataIndex: 'type',
+                key: 'type',
+                render: (t) => <Text code>{t}</Text>,
+              },
+              { title: 'Description', dataIndex: 'desc', key: 'desc' },
+            ]}
+          />
+          <Title level={5}>JSON Example</Title>
+          <CodeBlock>
+            {JSON.stringify(
+              {
+                width: 4,
+                height: 3,
+                defaultScore: 10,
+                cells: {
+                  '1_0': { label: 'Problem A' },
+                  '2_0': { label: 'Problem B' },
+                  '3_0': { label: 'Problem C' },
+                  '0_1': { teamId: 1, label: 'Red' },
+                  '1_1': { teamId: 1, problemId: 1, label: 'A' },
+                  '2_1': { teamId: 1, problemId: 2, label: 'B' },
+                  '3_1': { teamId: 1, problemId: 3, label: 'C', score: 30 },
+                  '0_2': { teamId: 2, label: 'Blue' },
+                  '1_2': { teamId: 2, problemId: 1, label: 'A' },
+                  '2_2': { teamId: 2, problemId: 2, label: 'B' },
+                  '3_2': { teamId: 2, problemId: 3, label: 'C', score: 30 },
+                },
               },
               null,
               2
