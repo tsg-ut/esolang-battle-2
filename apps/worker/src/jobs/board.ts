@@ -1,4 +1,9 @@
-import { BoardState, BoardSubmission, getBoardEngine } from '@esolang-battle/common';
+import {
+  BoardState,
+  BoardSubmission,
+  getBoardEngine,
+  isInContestTime,
+} from '@esolang-battle/common';
 import { prisma } from '@esolang-battle/db';
 
 /**
@@ -44,6 +49,13 @@ export async function syncBoardWithSubmissions(boardId: number) {
     let lastProcessedId = lastId;
 
     for (const sub of nextSubmissions) {
+      // コンテスト時間外 (submittedAt で判定) の提出は盤面に反映しない。
+      // 結果を待つ必要もないので、ジャッジ中でも処理済みとして進める
+      if (!isInContestTime(board.contest, sub.submittedAt)) {
+        lastProcessedId = sub.id;
+        continue;
+      }
+
       // 重要: 順序を守るため、まだジャッジ中の提出にぶつかったらそこで停止する
       if (sub.status === 'WJ') {
         console.log(

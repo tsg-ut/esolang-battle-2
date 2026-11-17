@@ -106,6 +106,8 @@ export const submissionSummarySchema = z.object({
     id: z.number(),
     name: z.string(),
   }),
+  /** コンテスト時間内の提出か (時間外の提出は盤面・順位表に反映されない) */
+  inTime: z.boolean(),
 });
 
 export const boardSummarySchema = z.object({
@@ -264,3 +266,4 @@ export type ScoreAggregatorOutput = {
 
 export * from './board';
 export * from './config';
+export * from './contestTime';

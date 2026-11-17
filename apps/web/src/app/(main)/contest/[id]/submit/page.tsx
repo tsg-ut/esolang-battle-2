@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { LoginRequiredMessage } from '@/components/LoginRequiredMessage';
 import { CodeSubmitForm } from '@/components/submission/CodeSubmitForm';
+import { useSubmissionNotice } from '@/components/submission/useSubmissionNotice';
 import { trpc } from '@/utils/trpc';
 import { App, Select } from 'antd';
 
@@ -15,6 +16,7 @@ function SubmitForm() {
   const searchParams = useSearchParams();
   const contestId = Number(params.id);
   const { message } = App.useApp();
+  const notifySubmission = useSubmissionNotice();
 
   const { data: me, isLoading: isLoadingMe } = trpc.me.useQuery();
   const isLoggedIn = !!me;
@@ -70,13 +72,13 @@ function SubmitForm() {
       return;
     }
     try {
-      await submitMutation.mutateAsync({
+      const result = await submitMutation.mutateAsync({
         code: data.code,
         isBase64: data.isBase64,
         languageId: Number(selectedLanguageId),
         problemId: Number(selectedProblemId),
       });
-      message.success('提出が完了しました');
+      notifySubmission(contestId, result);
       router.push(`/contest/${contestId}/submissions`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);

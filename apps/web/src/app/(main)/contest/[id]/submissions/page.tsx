@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { StringFilterDropdown } from '@/components/admin/StringFilterDropdown';
+import { OutOfTimeTag } from '@/components/submission/OutOfTimeTag';
 import { trpc } from '@/utils/trpc';
 import { UserOutlined } from '@ant-design/icons';
 import { Avatar, Button, Table, Tag, Typography } from 'antd';
@@ -247,7 +248,7 @@ export default function SubmissionsPage() {
         { text: 'RE', value: 'RE' },
         { text: 'WJ', value: 'WJ' },
       ],
-      render: (status: string) => {
+      render: (status: string, record) => {
         const colorMap: any = {
           AC: 'success',
           WA: 'warning',
@@ -255,7 +256,12 @@ export default function SubmissionsPage() {
           RE: 'error',
           WJ: 'default',
         };
-        return <Tag color={colorMap[status] || 'default'}>{status}</Tag>;
+        return (
+          <>
+            <Tag color={colorMap[status] || 'default'}>{status}</Tag>
+            {!record.inTime && <OutOfTimeTag />}
+          </>
+        );
       },
     },
     {

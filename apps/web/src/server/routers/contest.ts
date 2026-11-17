@@ -1,4 +1,5 @@
 import { getAvatarUrl } from '@/utils/user';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { boardSummarySchema, contestIdSchema, contestSummarySchema } from '@esolang-battle/common';
@@ -76,9 +77,10 @@ export const contestRouter = router({
 
     const contest = await ctx.prisma.contest.findUnique({
       where: { id: contestId },
-      select: { scoreOrder: true },
+      select: { scoreOrder: true, startAt: true, endAt: true },
     });
-    const isAsc = contest?.scoreOrder === 'ASC';
+    if (!contest) throw new TRPCError({ code: 'NOT_FOUND', message: 'Contest not found' });
+    const isAsc = contest.scoreOrder === 'ASC';
 
     const problems = await ctx.prisma.problem.findMany({
       where: { contestId },
@@ -99,12 +101,13 @@ export const contestRouter = router({
       where: { contestId },
     });
 
-    // AC かつ スコアがある提出のみを取得
+    // コンテスト時間内 (isInContestTime と同じ境界) かつ AC かつ スコアがある提出のみを取得
     const submissions = await ctx.prisma.submission.findMany({
       where: {
         problem: { contestId },
         status: 'AC',
         score: { not: null },
+        submittedAt: { gte: contest.startAt, lte: contest.endAt },
       },
       select: {
         userId: true,

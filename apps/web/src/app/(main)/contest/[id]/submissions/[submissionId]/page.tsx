@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import { OutOfTimeTag } from '@/components/submission/OutOfTimeTag';
 import { TextVizEditor } from '@/components/submission/TextVizEditor';
 import { trpc } from '@/utils/trpc';
 import {
@@ -168,6 +169,7 @@ export default function SubmissionDetailPage() {
             <Tag color={getStatusColor(submission.status)} style={{ fontWeight: 'bold' }}>
               {submission.status}
             </Tag>
+            {!submission.inTime && <OutOfTimeTag />}
           </Descriptions.Item>
           <Descriptions.Item label="スコア">
             <Text strong style={{ fontSize: 20, color: '#1677ff', fontFamily: 'monospace' }}>

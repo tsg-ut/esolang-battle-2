@@ -8,6 +8,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { LoginRequiredMessage } from '@/components/LoginRequiredMessage';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { CodeSubmitForm } from '@/components/submission/CodeSubmitForm';
+import { useSubmissionNotice } from '@/components/submission/useSubmissionNotice';
 import { trpc } from '@/utils/trpc';
 import { CopyOutlined } from '@ant-design/icons';
 import { App, Button, Tooltip } from 'antd';
@@ -41,6 +42,7 @@ export default function ProblemDetailPage() {
   const problemId = Number(params.problemId);
   const router = useRouter();
   const { message } = App.useApp();
+  const notifySubmission = useSubmissionNotice();
 
   const { data: me, isLoading: isLoadingMe } = trpc.me.useQuery();
   const isLoggedIn = !!me;
@@ -68,13 +70,13 @@ export default function ProblemDetailPage() {
   }) => {
     if (!isLoggedIn) return;
     try {
-      await submitMutation.mutateAsync({
+      const result = await submitMutation.mutateAsync({
         problemId,
         languageId: Number(selectedLanguageId),
         code: data.code,
         isBase64: data.isBase64,
       });
-      message.success('提出が完了しました');
+      notifySubmission(contestId, result);
       router.push(`/contest/${contestId}/submissions`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);

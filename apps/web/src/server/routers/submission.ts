@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import {
   MAX_CODE_SIZE,
+  isInContestTime,
   submissionFilterSchema,
   submissionIdSchema,
   submissionSummarySchema,
@@ -88,6 +89,7 @@ export const submissionRouter = router({
       return {
         items: items.map((s) => ({
           ...s,
+          inTime: isInContestTime(s.problem.contest, s.submittedAt),
           submittedAt: s.submittedAt.toISOString(),
           user: {
             ...s.user,
@@ -143,6 +145,7 @@ export const submissionRouter = router({
         status: submission.status,
         message: submission.message,
         submittedAt: submission.submittedAt,
+        inTime: contest ? isInContestTime(contest, submission.submittedAt) : true,
         language: {
           id: submission.language.id,
           name: submission.language.name,
@@ -210,6 +213,20 @@ export const submissionRouter = router({
       });
     }
 
+    // 2. コンテスト期間のチェック
+    // 開始前の提出は拒否する (管理者はテストのため許可)。終了後の提出は受け付けるが、
+    // 盤面・順位表には反映されないため、時間内かどうかを返してクライアントで通知する
+    const problem = await ctx.prisma.problem.findUnique({
+      where: { id: input.problemId },
+      select: { contest: { select: { id: true, startAt: true, endAt: true } } },
+    });
+    if (!problem) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Problem not found' });
+    }
+    if (!ctx.user.isAdmin && new Date() < problem.contest.startAt) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'コンテストはまだ開始していません' });
+    }
+
     const slotId = await acquireExecutionSlot(ctx.user.id);
     try {
       const submission = await createSubmission(ctx.prisma, {
@@ -222,7 +239,11 @@ export const submissionRouter = router({
         userId: ctx.user.id,
         slotId,
       });
-      return submission;
+      return {
+        ...submission,
+        inTime: isInContestTime(problem.contest, submission.submittedAt),
+        contestEndAt: problem.contest.endAt.toISOString(),
+      };
     } catch (err) {
       await releaseExecutionSlot(ctx.user.id, slotId);
       throw err;
