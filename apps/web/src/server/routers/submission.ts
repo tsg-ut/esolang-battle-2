@@ -201,6 +201,8 @@ export const submissionRouter = router({
   getSubmittableLanguageIdsForTeam: protectedProcedure
     .input(submittableLanguageSchema)
     .query(async ({ ctx, input }) => {
+      // 盤面の言語構成が分かるため、開始前は管理者以外に返さない
+      await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
       return await getSubmittableLanguageIdsForTeam(ctx.prisma, input.teamId, input.contestId);
     }),
   submitCode: protectedProcedure.input(submitCodeSchema).mutation(async ({ ctx, input }) => {

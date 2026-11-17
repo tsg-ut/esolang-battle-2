@@ -50,7 +50,8 @@ export const contestRouter = router({
       return await getBoard(ctx.prisma, input.contestId);
     }),
   getContest: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
-    await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
+    // コンテスト名・時刻は開始前でも表示する (コンテストページのヘッダーで「開始前」と表示するため)
+    await ensureContestAccess(ctx.prisma, input.contestId, ctx.user, { allowBeforeStart: true });
     const contest = await ctx.prisma.contest.findUnique({
       where: { id: input.contestId },
     });
@@ -65,7 +66,8 @@ export const contestRouter = router({
     };
   }),
   getTeams: publicProcedure.input(contestIdSchema).query(async ({ ctx, input }) => {
-    await ensureContestAccess(ctx.prisma, input.contestId, ctx.user);
+    // チーム名・色は開始前でも表示してよい
+    await ensureContestAccess(ctx.prisma, input.contestId, ctx.user, { allowBeforeStart: true });
     return await ctx.prisma.team.findMany({
       where: { contestId: input.contestId },
       select: { id: true, name: true, color: true },

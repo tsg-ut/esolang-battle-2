@@ -3,6 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 
 import { BoardRenderer } from '@/components/board/BoardRenderer';
+import { checkContestPageAccess } from '@/server/function/contestPageAccess';
 import { getBoard } from '@/server/function/getBoard';
 import { FullscreenOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
@@ -12,6 +13,11 @@ import { prisma } from '@esolang-battle/db';
 export default async function BoardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const contestId = Number(id);
+
+  const access = await checkContestPageAccess(contestId);
+  if (!access.ok) {
+    return <div className="py-12 text-center text-gray-500">{access.message}</div>;
+  }
 
   const boardData = await getBoard(prisma, contestId);
 
