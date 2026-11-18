@@ -12,7 +12,7 @@ import type { ColumnsType } from 'antd/es/table';
 
 import { BoardCell, BoardState, RankingTableBoardConfig } from '@esolang-battle/common';
 
-import { BoardTeam, TeamStatsBar } from './shared';
+import { BoardTeam } from './shared';
 
 type RankingTableBoardProps = {
   config: RankingTableBoardConfig;
@@ -73,12 +73,6 @@ export const RankingTableBoard: React.FC<RankingTableBoardProps> = ({
       }))
       .sort((a, b) => (a.cell?.rank ?? Infinity) - (b.cell?.rank ?? Infinity));
   }, [config.teams, state, teams]);
-
-  const points = useMemo(() => {
-    const result: Record<number, number> = {};
-    rows.forEach((r) => (result[r.teamId] = Number(formatRankingPoints(r.cell?.points ?? 0))));
-    return result;
-  }, [rows]);
 
   // 係数とスコアの列は multipliers を設定したときのみ表示する
   const showMultiplier = config.multipliers !== undefined;
@@ -204,7 +198,6 @@ export const RankingTableBoard: React.FC<RankingTableBoardProps> = ({
           bordered
         />
       </div>
-      <TeamStatsBar teams={teams} teamStats={points} />
     </div>
   );
 };
