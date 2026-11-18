@@ -2,6 +2,7 @@ import { IBoardEngine } from '../types';
 import { CrossGridBoardEngine } from './crossgrid';
 import { GridBoardEngine } from './grid';
 import { HoneycombBoardEngine } from './honeycomb';
+import { RankingTableBoardEngine } from './rankingtable';
 import { TeamTargetBoardEngine } from './teamtarget';
 
 const engines: Record<string, IBoardEngine<any>> = {
@@ -9,6 +10,7 @@ const engines: Record<string, IBoardEngine<any>> = {
   HONEYCOMB: new HoneycombBoardEngine(),
   CROSS_GRID: new CrossGridBoardEngine(),
   TEAM_TARGET: new TeamTargetBoardEngine(),
+  RANKING_TABLE: new RankingTableBoardEngine(),
 };
 
 export function getBoardEngine(type: string): IBoardEngine<any> {

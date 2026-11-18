@@ -8,6 +8,7 @@ import {
   BoardState,
   TeamTargetBoardConfig,
   getTeamTargetCellScore,
+  isTeamTargetClaimableCell,
   isTeamTargetGoalCell,
 } from '@esolang-battle/common';
 
@@ -41,15 +42,18 @@ export const TeamTargetBoard: React.FC<TeamTargetBoardProps> = ({
   const { width, height, cells } = config;
   const onCellKeyDown = useCellKeyDown(contestId);
 
-  // チームごとの獲得点数と獲得セル数 (固定セルは含めない)
+  // チームごとの獲得点数と獲得セル数 (固定セルは含めない)。共有セルは獲得した各チームに加える
   const { points, counts } = useMemo(() => {
     const points: Record<number, number> = {};
     const counts: Record<number, number> = {};
     Object.entries(cells).forEach(([cellId, cell]) => {
-      if (cell.teamId === undefined || !isTeamTargetGoalCell(cell)) return;
-      if (!state[cellId]?.ownerTeamIds?.includes(cell.teamId)) return;
-      points[cell.teamId] = (points[cell.teamId] || 0) + getTeamTargetCellScore(config, cell);
-      counts[cell.teamId] = (counts[cell.teamId] || 0) + 1;
+      if (!isTeamTargetClaimableCell(cell)) return;
+      const owners = state[cellId]?.ownerTeamIds ?? [];
+      const teamIds = cell.shared ? owners : owners.filter((id) => id === cell.teamId);
+      teamIds.forEach((teamId) => {
+        points[teamId] = (points[teamId] || 0) + getTeamTargetCellScore(config, cell);
+        counts[teamId] = (counts[teamId] || 0) + 1;
+      });
     });
     return { points, counts };
   }, [cells, config, state]);
@@ -92,7 +96,7 @@ export const TeamTargetBoard: React.FC<TeamTargetBoardProps> = ({
             const label = info.label ?? '';
 
             // ラベルセル: 見出しなどの表示専用
-            if (info.teamId === undefined) {
+            if (info.teamId === undefined && !info.shared) {
               return (
                 <div
                   key={cellId}
@@ -108,19 +112,28 @@ export const TeamTargetBoard: React.FC<TeamTargetBoardProps> = ({
             }
 
             const cell = state[cellId];
-            const teamColor = teamColors[info.teamId] || FALLBACK_TEAM_COLOR;
             const isGoalCell = isTeamTargetGoalCell(info);
-            const isOwned = cell?.ownerTeamIds?.includes(info.teamId) ?? false;
+            const isOwned = info.shared
+              ? (cell?.ownerTeamIds?.length ?? 0) > 0
+              : info.teamId !== undefined && (cell?.ownerTeamIds?.includes(info.teamId) ?? false);
 
             // 固定セル: 最初からそのチームが所有し、塗り替えられない
             // 目標セル: 未獲得の間はチーム色を薄く表示し、獲得するとチーム色で塗る
-            const style: React.CSSProperties =
-              !isGoalCell || isOwned
-                ? getCellStyle(isOwned ? cell?.ownerTeamIds : [info.teamId], teamColors)
-                : {
-                    backgroundColor: `color-mix(in srgb, ${teamColor} 20%, white)`,
-                    color: '#666',
-                  };
+            // 共有セル: 未獲得の間は灰色、獲得したチームの色で塗り分ける
+            let style: React.CSSProperties;
+            if (isOwned) {
+              style = getCellStyle(cell?.ownerTeamIds, teamColors);
+            } else if (info.shared || info.teamId === undefined) {
+              style = getCellStyle([], teamColors);
+            } else if (!isGoalCell) {
+              style = getCellStyle([info.teamId], teamColors);
+            } else {
+              const teamColor = teamColors[info.teamId] || FALLBACK_TEAM_COLOR;
+              style = {
+                backgroundColor: `color-mix(in srgb, ${teamColor} 20%, white)`,
+                color: '#666',
+              };
+            }
 
             const cellContent = (
               <div

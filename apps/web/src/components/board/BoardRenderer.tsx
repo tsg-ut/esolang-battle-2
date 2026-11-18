@@ -12,6 +12,7 @@ import { BoardData, BoardState } from '@esolang-battle/common';
 import { CrossGridBoard } from './engines/CrossGridBoard';
 import { GridBoard } from './engines/GridBoard';
 import { HoneycombBoard } from './engines/HoneycombBoard';
+import { RankingTableBoard } from './engines/RankingTableBoard';
 import { TeamTargetBoard } from './engines/TeamTargetBoard';
 
 const { Text } = Typography;
@@ -30,6 +31,7 @@ const engines: Record<
   HONEYCOMB: HoneycombBoard as any,
   CROSS_GRID: CrossGridBoard as any,
   TEAM_TARGET: TeamTargetBoard as any,
+  RANKING_TABLE: RankingTableBoard as any,
 };
 
 export function BoardRenderer({ initialData }: { initialData: BoardData | null }) {

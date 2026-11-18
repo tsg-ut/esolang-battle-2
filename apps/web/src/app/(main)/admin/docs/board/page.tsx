@@ -115,6 +115,60 @@ export default function BoardDocsPage() {
       type: '{ label }',
       desc: '見出しなどの表示専用セル。',
     },
+    {
+      key: '4',
+      name: '共有セル',
+      type: '{ shared: true, languageId?, problemId?, label?, score? }',
+      desc: '目標セルと同じ条件で、どのチームのメンバーでも AC すれば獲得できるセル。複数チームが獲得でき、獲得したチームそれぞれが score 点を得ます。teamId とは同時に指定できません。同じ言語 × 問題の組み合わせに共有セルとチームの目標セルの両方を置くことはできません。未獲得の間は灰色、獲得したチームの色で塗り分けます。',
+    },
+  ];
+
+  const rankingTableFields = [
+    {
+      key: '1',
+      name: 'problemId',
+      type: 'number',
+      desc: '対象の問題（オプション）。省略時はコンテスト内の全問題が対象。',
+    },
+    {
+      key: '2',
+      name: 'languageIds',
+      type: 'number[]',
+      desc: '対象の言語（オプション）。これ以外の言語の提出は無視します。省略時は全言語が対象。',
+    },
+    {
+      key: '3',
+      name: 'teams',
+      type: '{ teamId, languageId? }[]',
+      desc: '表に載せるチーム。languageId を指定すると、そのチームはその言語の提出のみが対象になります。',
+    },
+    {
+      key: '4',
+      name: 'points',
+      type: 'object',
+      desc: '得点ルール（オプション）。デフォルト: { type: "RANK", values: [100, 80, 60] }（下表）',
+    },
+    {
+      key: '5',
+      name: 'showMultiplier',
+      type: 'boolean',
+      desc: '係数（スコア ÷ バイト数）とスコアの列を表示するか（オプション）。集計スクリプトでスコアを「バイト数 × 係数」にする場合に使います。',
+    },
+  ];
+
+  const rankingTablePointKinds = [
+    {
+      key: '1',
+      name: 'RANK',
+      type: '{ type: "RANK", values: number[], noSubmissionPoints? }',
+      desc: '順位に応じて values[順位 - 1] 点（範囲外は 0 点）。同じスコアは同じ順位で、次の順位は詰めます（1-1-2）。提出のないチームは noSubmissionPoints 点（デフォルト: values の最後の値）。',
+    },
+    {
+      key: '2',
+      name: 'RATIO',
+      type: '{ type: "RATIO", base?, noSubmissionPoints? }',
+      desc: 'base × 最良スコア ÷ チームのスコア（scoreOrder が DESC なら チームのスコア ÷ 最良スコア）。base のデフォルト: 100。提出のないチームは noSubmissionPoints 点（デフォルト: 0）。',
+    },
   ];
 
   const cellStateFields = [
@@ -349,6 +403,92 @@ export default function BoardDocsPage() {
                   '2_2': { teamId: 2, problemId: 2, label: 'B' },
                   '3_2': { teamId: 2, problemId: 3, label: 'C', score: 30 },
                 },
+              },
+              null,
+              2
+            )}
+          </CodeBlock>
+          <Title level={5}>共有セルの例</Title>
+          <CodeBlock>
+            {JSON.stringify(
+              {
+                width: 2,
+                height: 1,
+                defaultScore: 15,
+                cells: {
+                  '0_0': { shared: true, languageId: 1, label: 'Brainfuck' },
+                  '1_0': { shared: true, languageId: 2, label: 'Python' },
+                },
+              },
+              null,
+              2
+            )}
+          </CodeBlock>
+        </Card>
+      ),
+    },
+    {
+      key: 'rankingtable',
+      label: 'RANKING_TABLE Board',
+      children: (
+        <Card className="mt-4 shadow-sm">
+          <Paragraph>
+            チームごとに最良の提出を 1 つ記録し、順位表として表示するボードです。最良はコンテストの{' '}
+            <Text code>scoreOrder</Text>{' '}
+            で判定し、同じスコアなら先の提出を残します。対象の問題・言語以外の提出は無視します。
+            表には順位・チーム・提出者・バイト数・1 位との差・得点を表示します。
+          </Paragraph>
+          <Paragraph type="secondary">
+            state はチーム ID をキーとし、最良の提出の <Text code>score</Text> /{' '}
+            <Text code>codeLength</Text> / <Text code>languageId</Text> と、順位{' '}
+            <Text code>rank</Text>（提出がなければ null）・得点 <Text code>points</Text>{' '}
+            を持ちます。得点は小数を保持し、表示では小数第 2 位まで切り捨てます。共通設定項目の{' '}
+            <Text code>allowMultiOwner</Text> / <Text code>startingPositions</Text> は使用しません。
+          </Paragraph>
+          <Table
+            dataSource={rankingTableFields}
+            pagination={false}
+            size="small"
+            className="mb-4"
+            columns={[
+              {
+                title: 'Property',
+                dataIndex: 'name',
+                key: 'name',
+                render: (t) => <Text code>{t}</Text>,
+              },
+              { title: 'Type', dataIndex: 'type', key: 'type' },
+              { title: 'Description', dataIndex: 'desc', key: 'desc' },
+            ]}
+          />
+          <Table
+            dataSource={rankingTablePointKinds}
+            pagination={false}
+            size="small"
+            className="mb-4"
+            columns={[
+              { title: 'points', dataIndex: 'name', key: 'name' },
+              {
+                title: 'Shape',
+                dataIndex: 'type',
+                key: 'type',
+                render: (t) => <Text code>{t}</Text>,
+              },
+              { title: 'Description', dataIndex: 'desc', key: 'desc' },
+            ]}
+          />
+          <Title level={5}>JSON Example</Title>
+          <CodeBlock>
+            {JSON.stringify(
+              {
+                problemId: 1,
+                teams: [
+                  { teamId: 1, languageId: 3 },
+                  { teamId: 2, languageId: 5 },
+                  { teamId: 3, languageId: 8 },
+                ],
+                points: { type: 'RATIO', base: 100 },
+                showMultiplier: true,
               },
               null,
               2

@@ -15,6 +15,7 @@ import { BaseBoardEngine } from './base';
  * AC するとセルを獲得して config で指定された点数を得る。隣接ルールはなく、一度獲得したセルは失われない。
  * 同じセルに複数メンバーが AC した場合は全員の提出を記録する。
  * 1 つの提出が複数のセルの条件を満たす場合は、そのすべてに反映する。
+ * 共有セル (shared: true) は、どのチームのメンバーでも条件を満たせば獲得でき、複数チームが所有できる。
  */
 export class TeamTargetBoardEngine extends BaseBoardEngine<TeamTargetBoardConfig> {
   /** 提出が条件を満たすセルID をすべて返す */
@@ -52,16 +53,21 @@ export class TeamTargetBoardEngine extends BaseBoardEngine<TeamTargetBoardConfig
     let next = state;
     for (const cellId of this.getTargetCellIds(config, submission)) {
       const cellConfig = config.cells[cellId];
-      const teamId = cellConfig.teamId;
+      // 共有セルは提出したチームを所有者に加える (getTargetCellIds で提出者のチームの存在は確認済み)
+      const teamId = cellConfig.shared === true ? submission.user.teams[0].id : cellConfig.teamId;
       if (teamId === undefined) continue;
 
       const cell = next[cellId] ?? { ownerTeamIds: [], submissionIds: [], score: null };
       if (cell.submissionIds.includes(submission.id)) continue;
 
+      const ownerTeamIds = cell.ownerTeamIds.includes(teamId)
+        ? cell.ownerTeamIds
+        : [...cell.ownerTeamIds, teamId].sort((a, b) => a - b);
+
       next = {
         ...next,
         [cellId]: {
-          ownerTeamIds: [teamId],
+          ownerTeamIds,
           submissionIds: [...cell.submissionIds, submission.id],
           score: getTeamTargetCellScore(config, cellConfig),
         },
@@ -73,10 +79,10 @@ export class TeamTargetBoardEngine extends BaseBoardEngine<TeamTargetBoardConfig
   createInitialState(config: TeamTargetBoardConfig): BoardState {
     const state: BoardState = {};
     for (const [cellId, cell] of Object.entries(config.cells)) {
-      if (cell.teamId === undefined) continue; // ラベルセルは状態を持たない
+      if (cell.teamId === undefined && cell.shared !== true) continue; // ラベルセルは状態を持たない
       state[cellId] = {
         // 固定セル (言語・問題の指定なし) は最初からそのチームの所有
-        ownerTeamIds: isTeamTargetGoalCell(cell) ? [] : [cell.teamId],
+        ownerTeamIds: isTeamTargetGoalCell(cell) || cell.teamId === undefined ? [] : [cell.teamId],
         submissionIds: [],
         score: null,
       };
