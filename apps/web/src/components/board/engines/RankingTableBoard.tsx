@@ -80,6 +80,9 @@ export const RankingTableBoard: React.FC<RankingTableBoardProps> = ({
     return result;
   }, [rows]);
 
+  // 係数とスコアの列は multipliers を設定したときのみ表示する
+  const showMultiplier = config.multipliers !== undefined;
+
   const columns: ColumnsType<Row> = [
     {
       title: '順位',
@@ -132,22 +135,22 @@ export const RankingTableBoard: React.FC<RankingTableBoardProps> = ({
             ) : (
               `${cell.codeLength} bytes`
             )}
-            {config.showMultiplier && language && (
+            {showMultiplier && language && (
               <span className="ml-1 text-xs text-gray-400">({language})</span>
             )}
           </span>
         );
       },
     },
-    ...(config.showMultiplier
+    ...(showMultiplier
       ? ([
           {
             title: '係数',
             key: 'multiplier',
             align: 'right',
             render: (_, r) =>
-              typeof r.cell?.score === 'number' && r.cell.codeLength ? (
-                <span className="font-mono">×{formatNumber(r.cell.score / r.cell.codeLength)}</span>
+              typeof r.cell?.multiplier === 'number' ? (
+                <span className="font-mono">×{formatNumber(r.cell.multiplier)}</span>
               ) : (
                 <span className="text-gray-400">-</span>
               ),

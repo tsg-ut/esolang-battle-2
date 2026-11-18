@@ -16,6 +16,7 @@ export const BoardCellSchema = z.object({
   score: z.number().nullable(),
   // 以下は RANKING_TABLE のみ使用
   codeLength: z.number().optional(), // 最良の提出のバイト数
+  multiplier: z.number().optional(), // 最良の提出の言語の係数 (multipliers を設定したときのみ)
   languageId: z.number().optional(), // 最良の提出の言語
   rank: z.number().nullable().optional(), // 順位 (提出がなければ null)
   points: z.number().optional(), // 得点
@@ -235,7 +236,9 @@ export function getTeamTargetCellScore(config: TeamTargetBoardConfig, cell: Team
 //              (values の範囲外は 0 点)。提出のないチームは noSubmissionPoints 点 (デフォルト: values の最後)
 //       RATIO: base × 最良スコア / チームのスコア (scoreOrder が DESC なら チームのスコア / 最良スコア)。
 //              提出のないチームは noSubmissionPoints 点 (デフォルト: 0)
-//   - showMultiplier: 係数 (スコア ÷ バイト数) の列を表示するか
+//   - multipliers: 言語ごとの係数 (languageId -> 係数)。指定すると、提出のスコアの代わりに
+//                  バイト数 × 係数 を盤面のスコアにする (提出のスコアは整数でしか保存できないため)。
+//                  係数のない言語の提出は無視する。表には係数とスコアの列が出る
 export const RankingTablePointsSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('RANK'),
@@ -269,7 +272,7 @@ export const RankingTableBoardConfigSchema = z
       )
       .min(1),
     points: RankingTablePointsSchema.optional(),
-    showMultiplier: z.boolean().optional(),
+    multipliers: z.record(z.string().regex(/^\d+$/), z.number().positive()).optional(),
   })
   .superRefine((config, ctx) => {
     const seen = new Set<number>();
@@ -293,6 +296,17 @@ export const RankingTableBoardConfigSchema = z
           message: `チーム ${team.teamId} の言語 ${team.languageId} が languageIds に含まれていません`,
         });
       }
+      if (
+        team.languageId !== undefined &&
+        config.multipliers !== undefined &&
+        config.multipliers[String(team.languageId)] === undefined
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['teams', i, 'languageId'],
+          message: `チーム ${team.teamId} の言語 ${team.languageId} の係数が multipliers にありません`,
+        });
+      }
     });
   });
 export type RankingTableBoardConfig = z.infer<typeof RankingTableBoardConfigSchema>;
@@ -314,7 +328,28 @@ export function matchesRankingTable(
     return false;
   }
   if (team.languageId !== undefined && team.languageId !== submission.languageId) return false;
+  if (
+    config.multipliers !== undefined &&
+    getRankingTableMultiplier(config, submission.languageId) === undefined
+  ) {
+    return false;
+  }
   return true;
+}
+
+/** 言語の係数 (multipliers を設定していなければ undefined) */
+export function getRankingTableMultiplier(config: RankingTableBoardConfig, languageId: number) {
+  return config.multipliers?.[String(languageId)];
+}
+
+/** 盤面で使うスコア: multipliers があれば バイト数 × 係数、なければ提出のスコア */
+export function getRankingTableScore(
+  config: RankingTableBoardConfig,
+  submission: { languageId: number; codeLength: number; score: number | null }
+): number | null {
+  if (config.multipliers === undefined) return submission.score;
+  const multiplier = getRankingTableMultiplier(config, submission.languageId);
+  return multiplier === undefined ? null : submission.codeLength * multiplier;
 }
 
 /** state の各チームに順位 (rank) と得点 (points) を付け直す */

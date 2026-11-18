@@ -3,6 +3,8 @@ import {
   BoardSubmission,
   RankingTableBoardConfig,
   getRankingTableCellId,
+  getRankingTableMultiplier,
+  getRankingTableScore,
   matchesRankingTable,
   rankRankingTable,
 } from '../types';
@@ -13,6 +15,7 @@ import { BaseBoardEngine } from './base';
  *
  * チームごとに最良の提出 (スコア・バイト数・言語) を 1 つ記録し、順位と得点を付けて表として表示する。
  * 最良はコンテストの scoreOrder で判定し、同じスコアなら先の提出を残す。
+ * multipliers を設定すると、提出のスコアの代わりに バイト数 × 言語の係数 をスコアにする。
  * 対象の問題・言語 (チームごとの言語を含む) 以外の提出は無視する。隣接ルールはない。
  * 順位と得点は state の rank / points に保存する (提出のないチームの得点も入れる)。
  */
@@ -43,11 +46,13 @@ export class RankingTableBoardEngine extends BaseBoardEngine<RankingTableBoardCo
     const cellId = this.getTargetCellId(config, submission);
     if (!cellId) return state;
 
+    const score = getRankingTableScore(config, submission);
+    if (score === null) return state;
+
     const teamId = submission.user.teams[0].id;
     const cell = state[cellId] ?? { ownerTeamIds: [], submissionIds: [], score: null };
     const isBetter =
-      cell.score === null ||
-      (scoreOrder === 'ASC' ? submission.score < cell.score : submission.score > cell.score);
+      cell.score === null || (scoreOrder === 'ASC' ? score < cell.score : score > cell.score);
     if (!isBetter) return state;
 
     return rankRankingTable(
@@ -57,9 +62,10 @@ export class RankingTableBoardEngine extends BaseBoardEngine<RankingTableBoardCo
         [cellId]: {
           ownerTeamIds: [teamId],
           submissionIds: [submission.id],
-          score: submission.score,
+          score,
           codeLength: submission.codeLength,
           languageId: submission.languageId,
+          multiplier: getRankingTableMultiplier(config, submission.languageId),
         },
       },
       scoreOrder

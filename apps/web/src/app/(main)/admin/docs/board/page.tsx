@@ -150,9 +150,9 @@ export default function BoardDocsPage() {
     },
     {
       key: '5',
-      name: 'showMultiplier',
-      type: 'boolean',
-      desc: '係数（スコア ÷ バイト数）とスコアの列を表示するか（オプション）。集計スクリプトでスコアを「バイト数 × 係数」にする場合に使います。',
+      name: 'multipliers',
+      type: 'Record<languageId, number>',
+      desc: '言語ごとの係数（オプション）。指定すると、提出のスコアの代わりに「バイト数 × 係数」を盤面のスコアにします（提出のスコアは整数でしか保存できないため、小数の係数は盤面で計算します）。係数のない言語の提出は無視します。表に係数とスコアの列が出ます。',
     },
   ];
 
@@ -440,7 +440,8 @@ export default function BoardDocsPage() {
           </Paragraph>
           <Paragraph type="secondary">
             state はチーム ID をキーとし、最良の提出の <Text code>score</Text> /{' '}
-            <Text code>codeLength</Text> / <Text code>languageId</Text> と、順位{' '}
+            <Text code>codeLength</Text> / <Text code>languageId</Text> /{' '}
+            <Text code>multiplier</Text>（multipliers を設定したときのみ）と、順位{' '}
             <Text code>rank</Text>（提出がなければ null）・得点 <Text code>points</Text>{' '}
             を持ちます。得点は小数を保持し、表示では小数第 2 位まで切り捨てます。共通設定項目の{' '}
             <Text code>allowMultiOwner</Text> / <Text code>startingPositions</Text> は使用しません。
@@ -488,7 +489,7 @@ export default function BoardDocsPage() {
                   { teamId: 3, languageId: 8 },
                 ],
                 points: { type: 'RATIO', base: 100 },
-                showMultiplier: true,
+                multipliers: { '3': 1.1, '5': 1.5, '8': 0.9 },
               },
               null,
               2
